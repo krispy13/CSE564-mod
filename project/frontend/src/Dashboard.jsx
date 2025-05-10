@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import BarChart from './components/standard/BarChart';
 import PieChart from './components/standard/PieChart';
 import * as d3 from 'd3';
@@ -9,8 +9,50 @@ import MDS from './components/nonStandard/MDS';
 import PCA from './components/nonStandard/PCA';
 import MCA from './components/nonStandard/MCA';
 import PCP from './components/nonStandard/PCP';
+import StackedAreaChart from './components/standard/StackedAreaChart';
+import SunburstChart from './components/standard/SunburstChart';
+import GeoMap from './components/standard/GeoMap';
 
 export default function Dashboard() {
+    const [crimeData, setCrimeData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [restaurantData, setRestaurantData] = useState(null);
+    const [loadingRestaurants, setLoadingRestaurants] = useState(true);
+
+    // Fetch crime data from backend
+    useEffect(() => {
+        const fetchCrimeData = async () => {
+            try {
+                const response = await fetch('http://localhost:8000/crime_data');
+                const data = await response.json();
+                setCrimeData(data);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching crime data:', error);
+                setLoading(false);
+            }
+        };
+
+        fetchCrimeData();
+    }, []);
+
+    // Fetch restaurant data for sunburst chart
+    useEffect(() => {
+        const fetchRestaurantData = async () => {
+            try {
+                const response = await fetch('http://localhost:8000/sunburst_data');
+                const data = await response.json();
+                setRestaurantData(data);
+                setLoadingRestaurants(false);
+            } catch (error) {
+                console.error('Error fetching restaurant data:', error);
+                setLoadingRestaurants(false);
+            }
+        };
+
+        fetchRestaurantData();
+    }, []);
+
     // Bar Chart
     const BarData = [
         { label: 'January', value: 65 },
@@ -21,7 +63,7 @@ export default function Dashboard() {
         { label: 'June', value: 55 },
     ];
 
-    const pieData = [
+    const _pieData = [
         { label: 'Direct', value: 35 },
         { label: 'Organic Search', value: 25 },
         { label: 'Referral', value: 20 },
@@ -29,7 +71,7 @@ export default function Dashboard() {
         { label: 'Email', value: 5 },
     ];
 
-    const lineData = [
+    const _lineData = [
         { label: 'Jan', value: 10 },
         { label: 'Feb', value: 25 },
         { label: 'Mar', value: 15 },
@@ -40,7 +82,7 @@ export default function Dashboard() {
         { label: 'Aug', value: 50 },
     ];
 
-    const scatterData = [
+    const _scatterData = [
         { label: 'A', x: 10, y: 40 },
         { label: 'B', x: 20, y: 30 },
         { label: 'C', x: 30, y: 20 },
@@ -53,7 +95,7 @@ export default function Dashboard() {
         { label: 'J', x: 100, y: 45 },
     ];
 
-    const matrixData = [
+    const _matrixData = [
         { label: 'A', sales: 200, profit: 15, growth: 10, cost: 80 },
         { label: 'B', sales: 150, profit: 20, growth: 15, cost: 60 },
         { label: 'C', sales: 300, profit: 25, growth: 5, cost: 120 },
@@ -63,9 +105,9 @@ export default function Dashboard() {
         { label: 'G', sales: 180, profit: 16, growth: 18, cost: 85 },
         { label: 'H', sales: 400, profit: 30, growth: 8, cost: 140 },
     ];
-    const matrixDimensions = ['sales', 'profit', 'growth', 'cost'];
+    const _matrixDimensions = ['sales', 'profit', 'growth', 'cost'];
 
-    const mdsData = [
+    const _mdsData = [
         { label: "Product A", x: -2.5, y: 1.2, category: "Electronics" },
         { label: "Product B", x: -2.2, y: -0.8, category: "Electronics" },
         { label: "Product C", x: -1.8, y: 1.7, category: "Electronics" },
@@ -80,8 +122,7 @@ export default function Dashboard() {
         { label: "Product L", x: -0.2, y: -2.0, category: "Furniture" }
     ];
 
-
-    const pcaData = [
+    const _pcaData = [
         { label: "Item 1", pc1: 2.1, pc2: 1.5, category: "Group A" },
         { label: "Item 2", pc1: 1.8, pc2: -0.5, category: "Group A" },
         { label: "Item 3", pc1: 2.5, pc2: 0.8, category: "Group A" },
@@ -97,14 +138,14 @@ export default function Dashboard() {
     ];
 
     // Feature vectors showing the contribution of original features to PCs
-    const pcaFeatures = [
+    const _pcaFeatures = [
         { feature: "Feature 1", pc1: 0.8, pc2: 0.1 },
         { feature: "Feature 2", pc1: 0.7, pc2: -0.5 },
         { feature: "Feature 3", pc1: -0.2, pc2: 0.9 },
         { feature: "Feature 4", pc1: -0.5, pc2: 0.7 }
     ];
 
-    const mcaData = [
+    const _mcaData = [
         { label: "Person 1", dim1: 1.2, dim2: 0.8, category: "Segment A", attributes: ["Young", "Urban", "High Income"] },
         { label: "Person 2", dim1: 1.5, dim2: 1.1, category: "Segment A", attributes: ["Young", "Urban", "High Income"] },
         { label: "Person 3", dim1: 0.9, dim2: 0.7, category: "Segment A", attributes: ["Young", "Urban", "Medium Income"] },
@@ -120,7 +161,7 @@ export default function Dashboard() {
     ];
 
     // Variable categories plotted in the same correspondence space
-    const mcaVariables = [
+    const _mcaVariables = [
         // Age categories
         { variable: "Age", category: "Young", dim1: 0.9, dim2: -0.3 },
         { variable: "Age", category: "Middle Age", dim1: -0.4, dim2: 0.5 },
@@ -248,6 +289,49 @@ export default function Dashboard() {
         { name: "weight", label: "Weight (kg)" }
     ];
 
+    // Function to get top 5 crime types
+    const getTop5CrimeTypes = (data) => {
+        if (!data || data.length === 0) return [];
+        const crimeTypeTotals = data.reduce((acc, curr) => {
+            acc[curr.crime_type] = (acc[curr.crime_type] || 0) + curr.incident_count;
+            return acc;
+        }, {});
+
+        return Object.entries(crimeTypeTotals)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5)
+            .map(([crimeType]) => crimeType);
+    };
+    
+    // Process crime data for borough chart
+    const processCrimeDataForBoroughChart = (data) => {
+        if (!data || data.length === 0) return [];
+
+        const aggregatedByBoroughHour = d3.rollup(
+            data,
+            v => d3.sum(v, d => d.incident_count), // Sum incident_count
+            d => d.hour_of_day, // Group by hour
+            d => d.borough // Then by borough
+        );
+
+        const processed = [];
+        aggregatedByBoroughHour.forEach((boroughMap, hour_of_day) => {
+            boroughMap.forEach((incident_count, borough) => {
+                processed.push({
+                    hour_of_day: +hour_of_day, // ensure hour is a number
+                    borough,
+                    incident_count
+                });
+            });
+        });
+        return processed;
+    };
+
+
+    // Get top 5 crime types and filter data
+    const top5CrimeTypes = getTop5CrimeTypes(crimeData);
+    const processedDataForCrimeTypeChart = crimeData.filter(d => top5CrimeTypes.includes(d.crime_type));
+    const processedDataForBoroughChart = processCrimeDataForBoroughChart(crimeData);
 
 
     return (
@@ -259,88 +343,54 @@ export default function Dashboard() {
 
             {/* Main Content - Chart Grid */}
             <main className="flex-1 grid grid-cols-3 grid-rows-2 gap-3 min-h-0">
-                {/* Chart 1 */}
-                {/* <div className="bg-white rounded-md shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">Visitor Trends</h3>
-                    <div className="flex-1 min-h-0">
-                        <BarChart
-                            data={BarData}
-                            margin={{ top: 10, right: 15, bottom: 35, left: 35 }}
-                            xAxisLabel="Month"
-                            yAxisLabel="Visitors"
-                            barColor="#4F46E5"
-                            hoverColor="#818CF8"
-                            transitionDuration={500}
-                        />
-                    </div>
-                </div> */}
-
-
+                {/* Chart 1 - Stacked Area Chart by Crime Type */}
                 <div className="bg-white rounded-md shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">Principal Component Analysis</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">
+                        NYC Crime Trends by Type (Top 5)
+                    </h3>
                     <div className="flex-1 min-h-0">
-                        <PCA
-                            data={pcaData}
-                            margin={{ top: 30, right: 30, bottom: 40, left: 50 }}
-                            dotColor="#8B5CF6"
-                            dotHoverColor="#A78BFA"
-                            dotRadius={4}
-                            transitionDuration={800}
-                            showLabels={true}
-                            showArrows={true}
-                            featureData={pcaFeatures}
-                        />
+                        {loading ? (
+                            <div className="flex items-center justify-center h-full">
+                                <p className="text-gray-500">Loading crime data...</p>
+                            </div>
+                        ) : (
+                            <StackedAreaChart
+                                data={processedDataForCrimeTypeChart}
+                                margin={{ top: 30, right: 30, bottom: 60, left: 50 }}
+                                xKey="hour_of_day"
+                                yKey="incident_count"
+                                groupKey="crime_type"
+                                colorScale={d3.schemeCategory10}
+                                transitionDuration={800}
+                                showLegend={true}
+                                legendPosition="top"
+                                xAxisLabel="Hour of Day"
+                                yAxisLabel="Number of Crimes"
+                            />
+                        )}
                     </div>
                 </div>
 
-                {/* Chart 2 */}
-                {/* <div className="bg-white rounded-md shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">Traffic Distribution</h3>
-                    <div className="flex-1 min-h-0">
-                        <PieChart
-                            data={pieData}
-                            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                            innerRadius={60}
-                            colorScale={d3.schemeSet2}
-                            transitionDuration={750}
-                            showLegend={true}
-                            legendPosition="right"
-                        />
-                    </div>
-                </div> */}
+                {/* Chart 2 - Restaurant Sunburst Chart */}
                 <div className="bg-white rounded-md shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">Multiple Correspondence Analysis</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">NYC Restaurant Ratings</h3>
                     <div className="flex-1 min-h-0">
-                        <MCA
-                            data={mcaData}
-                            margin={{ top: 30, right: 30, bottom: 40, left: 50 }}
-                            dotColor="#F59E0B"
-                            dotHoverColor="#FBBF24"
-                            dotRadius={4}
-                            transitionDuration={800}
-                            showLabels={false}
-                            showVariables={true}
-                            variableData={mcaVariables}
-                        />
+                        {loadingRestaurants ? (
+                            <div className="flex items-center justify-center h-full">
+                                <p className="text-gray-500">Loading restaurant data...</p>
+                            </div>
+                        ) : (
+                            <SunburstChart
+                                data={restaurantData}
+                                margin={{ top: 30, right: 30, bottom: 40, left: 40 }}
+                                maxDepth={2}
+                                transitionDuration={600}
+                            />
+                        )}
                     </div>
                 </div>
 
-                {/* Chart 3 */}
-                {/* <div className="bg-white rounded-md shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">User Engagement</h3>
-                    <div className="flex-1 min-h-0">
-                        <LinePlot
-                            data={lineData}
-                            margin={{ top: 10, right: 20, bottom: 35, left: 35 }}
-                            lineColor="#3B82F6"
-                            dotColor="#60A5FA"
-                            xAxisLabel="Month"
-                            yAxisLabel="Users (K)"
-                            transitionDuration={800}
-                        />
-                    </div>
-                </div> */}
-
+                {/* Chart 3 - Product Attribute Analysis (PCP) */}
                 <div className="bg-white rounded-md shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden">
                     <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">Product Attribute Analysis</h3>
                     <div className="flex-1 min-h-0">
@@ -354,7 +404,7 @@ export default function Dashboard() {
                             lineHoverOpacity={0.9}
                             lineWidth={1.5}
                             transitionDuration={800}
-                            title="Product Metrics"
+                            title="Product Metrics" // PCP already has a title prop, so this is a bit redundant
                             showLabels={true}
                             labelKey="label"
                             colorByCategory={true}
@@ -362,56 +412,49 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Chart 4 */}
+                {/* Chart 4 - Stacked Area Chart by Borough */}
                 <div className="bg-white rounded-md shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">Performance Metrics</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">
+                        NYC Crime Trends by Borough
+                    </h3>
                     <div className="flex-1 min-h-0">
-                        <Scatterplot
-                            data={scatterData}
-                            margin={{ top: 10, right: 20, bottom: 35, left: 35 }}
-                            dotColor="#10B981"
-                            dotHoverColor="#34D399"
-                            xAxisLabel="Cost"
-                            yAxisLabel="Efficiency"
-                            transitionDuration={800}
-                            xKey="x"
-                            yKey="y"
-                            labelKey="label"
+                        {loading ? (
+                            <div className="flex items-center justify-center h-full">
+                                <p className="text-gray-500">Loading crime data...</p>
+                            </div>
+                        ) : (
+                            <StackedAreaChart
+                                data={processedDataForBoroughChart}
+                                margin={{ top: 30, right: 30, bottom: 60, left: 50 }}
+                                xKey="hour_of_day"
+                                yKey="incident_count"
+                                groupKey="borough"
+                                colorScale={d3.schemePaired}
+                                transitionDuration={800}
+                                showLegend={true}
+                                legendPosition="top"
+                                xAxisLabel="Hour of Day"
+                                yAxisLabel="Number of Crimes"
+                            />
+                        )}
+                    </div>
+                </div>
+
+                {/* Chart 5 - NYC Neighborhoods Map */}
+                <div className="bg-white rounded-md shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden">
+                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">NYC Neighborhoods</h3>
+                    <div className="flex-1 min-h-0">
+                        <GeoMap
+                            margin={{ top: 30, right: 30, bottom: 40, left: 40 }}
                         />
                     </div>
                 </div>
 
-                {/* Chart 5 */}
+                {/* Chart 6 - Empty Cell for 2x3 Grid */}
                 <div className="bg-white rounded-md shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">Multi-variable Analysis</h3>
-                    <div className="flex-1 min-h-0">
-                        <ScatterplotMatrix
-                            data={matrixData}
-                            dimensions={matrixDimensions}
-                            margin={{ top: 2, right: 2, bottom: 10, left: 2 }}
-                            padding={15}
-                            dotColor="#8B5CF6"
-                            dotHoverColor="#A78BFA"
-                            dotRadius={3}
-                            transitionDuration={600}
-                            showLabels={true}
-                        />
-                    </div>
-                </div>
-
-                {/* Chart 6 */}
-                <div className="bg-white rounded-md shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">Product Similarity Map</h3>
-                    <div className="flex-1 min-h-0">
-                        <MDS
-                            data={mdsData}
-                            margin={{ top: 30, right: 30, bottom: 40, left: 50 }}  // Increased top margin for legend
-                            dotColor="#8B5CF6"
-                            dotHoverColor="#A78BFA"
-                            dotRadius={4}
-                            transitionDuration={800}
-                            showLabels={true}
-                        />
+                    <h3 className="text-sm font-medium text-gray-700 mb-1 flex-shrink-0">Future Visualization</h3>
+                    <div className="flex-1 min-h-0 flex items-center justify-center">
+                        <p className="text-gray-400">Space available for additional chart</p>
                     </div>
                 </div>
             </main>

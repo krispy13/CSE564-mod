@@ -2,7 +2,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from typing import List, Optional
-from services import perform_pca, get_biplot_data, top_features, get_scatterplot_matrix_data, get_pca_loadings, perform_kmeans, compute_mds_json, compute_parallel_coordinates_json
+from services import perform_pca, get_biplot_data, top_features, get_scatterplot_matrix_data, get_pca_loadings, perform_kmeans, compute_mds_json, compute_parallel_coordinates_json, get_crime_data_by_hour, get_sunburst_data, get_nta_geojson
 
 app = FastAPI()
 
@@ -88,6 +88,31 @@ def get_parallel_coordinates():
     # Return the complete data structure
     return pdp_data
 
+@app.get("/crime_data")
+async def get_crime_data():
+    """
+    Returns NYC crime data by hour, formatted for the stacked area chart.
+    """
+    crime_data = get_crime_data_by_hour()
+    return crime_data
+
+@app.get("/sunburst_data")
+async def get_restaurant_sunburst_data():
+    """
+    Returns NYC restaurant data formatted for a sunburst visualization.
+    """
+    sunburst_data = get_sunburst_data()
+    return sunburst_data
+
+@app.get("/nta_geo")
+async def get_nta_geo_data():
+    """
+    Returns NYC Neighborhood Tabulation Areas (NTA) GeoJSON data for mapping.
+    """
+    geojson_data = get_nta_geojson()
+    if geojson_data is None:
+        return {"error": "Failed to load NTA GeoJSON data"}
+    return geojson_data
 
 @app.get("/")
 async def root():

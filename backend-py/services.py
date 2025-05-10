@@ -510,3 +510,183 @@ def compute_parallel_coordinates_json():
         "axes": axes,
         "encoders": encoders
     }
+
+def get_crime_data_by_hour():
+    """
+    Loads and processes the NYC crime data by hour, including borough information.
+    Returns data formatted for the stacked area chart.
+    """
+    # Get the base directory and construct absolute paths
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    # Assuming the original CSV 'nyc_crime_data_cleaned.csv' contains borough, crime_type, hour_of_day, incident_count
+    # If not, the source CSV needs to be checked and potentially replaced/modified.
+    # For now, let's assume 'nyc_crime_by_hour.csv' might be a pre-aggregated one.
+    # Let's try to use a more granular dataset if available or adjust.
+    # For the purpose of this fix, we will assume 'nyc_crime_by_hour.csv' *does* have borough.
+    # If it doesn't, this function would need to read from a more raw data source.
+    
+    crime_data_path = os.path.join(base_dir, "data", "nyc_crime_by_hour.csv") # This might need to change if this CSV is already too aggregated
+    
+    # Read the CSV file
+    df = pd.read_csv(crime_data_path)
+
+    # Ensure required columns exist (initial check for presence)
+    # This check is important before attempting to access df['borough']
+    if 'borough' not in df.columns:
+        print(f"Error: Critical 'borough' column not found in {crime_data_path}. Cannot proceed with borough-specific processing.")
+        # Depending on requirements, either return empty or data for crime_type only if possible
+        if 'crime_type' in df.columns and 'hour_of_day' in df.columns and 'incident_count' in df.columns:
+            print("Falling back to grouping by crime_type only due to missing 'borough' column.")
+            grouped_data = df.groupby(['crime_type', 'hour_of_day'])['incident_count'].sum().reset_index()
+            return grouped_data.to_dict('records')
+        return [] # Or raise an error
+
+    # Replace string versions of null with np.nan in 'borough' column
+    null_string_values = ['(null)', 'NULL', 'Null', 'nan', 'NaN', ''] # Add empty string if that represents null
+    df['borough'] = df['borough'].replace(null_string_values, np.nan)
+
+    # Now drop rows where 'borough' is NaN (either originally or after replacement)
+    df.dropna(subset=['borough'], inplace=True)
+
+    # Check for other required columns after ensuring 'borough' is handled
+    required_cols = ['borough', 'crime_type', 'hour_of_day', 'incident_count']
+    if not all(col in df.columns for col in required_cols):
+        # This implies some other required column might be missing
+        print(f"Error: One or more required columns ({required_cols}) are still missing after initial checks and borough processing in {crime_data_path}")
+        return []
+
+    # Optional: Fill NaN in 'incident_count' with 0 if that makes sense for the dataset
+    # df['incident_count'].fillna(0, inplace=True)
+
+    # Select and rename columns if necessary to match frontend expectations if they differ.
+    crime_data_records = df[['borough', 'crime_type', 'hour_of_day', 'incident_count']].to_dict('records')
+    
+    return crime_data_records
+
+def get_sunburst_data():
+    """
+    Loads and processes the restaurant data for a sunburst visualization.
+    Returns data formatted for D3.js sunburst chart.
+    """
+    # Get the base directory and construct absolute paths
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    sunburst_data_path = os.path.join(base_dir, "data", "sunburst_df.csv")
+    
+    # Read the CSV file
+    df = pd.read_csv(sunburst_data_path)
+    
+    # Create a hierarchical structure for the sunburst chart
+    data = {"name": "NYC Restaurants", "children": []}
+    
+    # Group by borough
+    boroughs = df['borough'].unique()
+    
+    for borough in boroughs:
+        borough_data = {"name": borough, "children": []}
+        borough_df = df[df['borough'] == borough]
+        
+        # Group by reduced cuisine type
+        cuisine_groups = borough_df['reduced_cuisine'].unique()
+        
+        for cuisine in cuisine_groups:
+            cuisine_data = {"name": cuisine, "children": []}
+            cuisine_df = borough_df[borough_df['reduced_cuisine'] == cuisine]
+            
+            # Add restaurant names
+            for _, row in cuisine_df.iterrows():
+                restaurant = {
+                    "name": row['name'],
+                    "value": 1,
+                    "rating": float(row['rating'])
+                }
+                cuisine_data["children"].append(restaurant)
+            
+            borough_data["children"].append(cuisine_data)
+        
+        data["children"].append(borough_data)
+    
+    return data
+
+def get_nta_geojson():
+    """
+    Loads and returns the NTA (Neighborhood Tabulation Areas) GeoJSON data.
+    Returns data formatted for D3.js geo visualization.
+    """
+    # Get the base directory and construct absolute paths
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    nta_geojson_path = os.path.join(base_dir, "data", "NTA.geo.json")
+    
+    try:
+        with open(nta_geojson_path, 'r') as f:
+            geojson_data = json.load(f)
+        
+        # Basic validation of the GeoJSON structure
+        if not isinstance(geojson_data, dict) or 'type' not in geojson_data or 'features' not in geojson_data:
+            print("Error: Invalid GeoJSON structure")
+            return {"error": "Invalid GeoJSON structure", "type": "FeatureCollection", "features": []}
+            
+        # Ensure the features array exists and is not empty
+        if not geojson_data['features'] or not isinstance(geojson_data['features'], list):
+            print("Error: No features found in GeoJSON")
+            return {"error": "No features found in GeoJSON", "type": "FeatureCollection", "features": []}
+        
+        valid_features = []
+        # Validate each feature has required properties
+        for i, feature in enumerate(geojson_data['features']):
+            # Skip features without geometry or properties
+            if 'geometry' not in feature or 'properties' not in feature:
+                continue
+                
+            # Skip features with empty or invalid geometry
+            if feature['geometry'] is None or 'type' not in feature['geometry'] or 'coordinates' not in feature['geometry']:
+                continue
+                
+            # Skip features with empty coordinates
+            if not feature['geometry']['coordinates'] or len(feature['geometry']['coordinates']) == 0:
+                continue
+                
+            # Ensure all properties exist, set defaults if missing
+            props = feature['properties']
+            if 'NTAName' not in props and 'NTAname' in props:
+                props['NTAName'] = props['NTAname']  # Fix potential case inconsistency
+            elif 'NTAName' not in props:
+                props['NTAName'] = f"Neighborhood {i}"
+                
+            if 'NTACode' not in props:
+                props['NTACode'] = f"NT{i:03d}"
+                
+            if 'BoroName' not in props:
+                # Try to determine borough from other properties if available
+                if 'BoroCode' in props:
+                    boro_code = props['BoroCode']
+                    if boro_code == 1:
+                        props['BoroName'] = "Manhattan"
+                    elif boro_code == 2:
+                        props['BoroName'] = "Bronx"
+                    elif boro_code == 3:
+                        props['BoroName'] = "Brooklyn"
+                    elif boro_code == 4:
+                        props['BoroName'] = "Queens"
+                    elif boro_code == 5:
+                        props['BoroName'] = "Staten Island"
+                    else:
+                        props['BoroName'] = "Unknown"
+                else:
+                    props['BoroName'] = "Unknown"
+            
+            valid_features.append(feature)
+        
+        # Replace features with only valid ones
+        geojson_data['features'] = valid_features
+            
+        print(f"Successfully loaded GeoJSON with {len(valid_features)} valid features")
+        return geojson_data
+    except FileNotFoundError:
+        print(f"Error: GeoJSON file not found at {nta_geojson_path}")
+        return {"error": "GeoJSON file not found", "type": "FeatureCollection", "features": []}
+    except json.JSONDecodeError as e:
+        print(f"Error parsing GeoJSON: {e}")
+        return {"error": f"JSON parsing error: {str(e)}", "type": "FeatureCollection", "features": []}
+    except Exception as e:
+        print(f"Error loading NTA GeoJSON data: {e}")
+        return {"error": f"Unknown error: {str(e)}", "type": "FeatureCollection", "features": []}
