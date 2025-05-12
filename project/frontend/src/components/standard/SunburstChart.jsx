@@ -1,10 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 
 const SunburstChart = ({
     data,
-    width = 600,
-    height = 600,
     margin = { top: 10, right: 10, bottom: 10, left: 10 },
     maxDepth = 2, // Represents the number of rings to show in any view
     transitionDuration = 750,
@@ -12,21 +10,67 @@ const SunburstChart = ({
     onBoroughSelect = null  // Add onBoroughSelect prop
 }) => {
     const svgRef = useRef();
+    const containerRef = useRef();
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+    // Borough color mapping for consistent visualization with softer colors on dark background
+    const BOROUGH_COLORS = {
+        'MANHATTAN': '#7AA2F7', // Soft blue from reference
+        'BROOKLYN': '#F27649', // Warm orange
+        'QUEENS': '#BB9AF7', // Soft purple from reference
+        'BRONX': '#F7768E', // Soft pink from reference
+        'STATEN ISLAND': '#73DACA' // Cyan from reference
+    };
+
+    // Function to get borough color with rating-based saturation
+    const getBoroughColorWithRating = (borough, rating) => {
+        if (!borough || !rating) return '#F27649'; // Warm orange when no borough selected
+        const baseColor = BOROUGH_COLORS[borough.toUpperCase()] || '#F27649';
+        const color = d3.hsl(baseColor);
+        
+        if (rating < 4) {
+            // For ratings 1-3.9: lighter, less saturated colors (indicating poor ratings)
+            const lightnessFactor = (4 - rating) / 3; // Scale from 0-1 for ratings 1-4
+            color.l = Math.min(0.8, color.l + (lightnessFactor * 0.4)); // Lighten up to 40%
+            color.s = Math.max(0.3, color.s * (1 - lightnessFactor * 0.6)); // Reduce saturation significantly
+        } else {
+            // For ratings 4-5: darker, rich colors (indicating good ratings)
+            const darknessFactor = (rating - 4); // Scale from 0-1 for ratings 4-5
+            color.l = Math.max(0.25, color.l - (darknessFactor * 0.3)); // Darken for emphasis
+            color.s = Math.min(1, color.s * (1 + darknessFactor * 0.4)); // Increase saturation for good ratings
+        }
+        
+        return color.toString();
+    };
+
+    // Add resize observer to update dimensions when container size changes
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const resizeObserver = new ResizeObserver(entries => {
+            if (!entries || !entries[0]) return;
+            const { width, height } = entries[0].contentRect;
+            setDimensions({ width, height });
+        });
+
+        resizeObserver.observe(container);
+        return () => resizeObserver.disconnect();
+    }, []);
 
     useEffect(() => {
-        if (!data || !data.children) return;
+        if (!data || !data.children || !dimensions.width || !dimensions.height) return;
 
         d3.select(svgRef.current).selectAll('*').remove();
 
-        const radius = Math.min(width - margin.left - margin.right, height - margin.top - margin.bottom) / 2;
-        
-        const colorScale = d3.scaleSequential(d3.interpolateRdYlGn).domain([3, 5]);
+        const radius = Math.min(dimensions.width - margin.left - margin.right, dimensions.height - margin.top - margin.bottom) / 2;
         
         const svg = d3.select(svgRef.current)
-            .attr('width', width)
-            .attr('height', height)
+            .attr('width', dimensions.width)
+            .attr('height', dimensions.height)
+            .style('background-color', '#24283b') // Dark background
             .append('g')
-            .attr('transform', `translate(${width / 2}, ${height / 2})`);
+            .attr('transform', `translate(${dimensions.width / 2}, ${dimensions.height / 2})`);
         
         const partition = dataIn => {
             const rootNode = d3.hierarchy(dataIn)
@@ -45,15 +89,17 @@ const SunburstChart = ({
         
         const tooltipDiv = d3.select('body')
             .append('div')
-            .attr('class', 'sunburst-tooltip')
+            .attr('class', 'sunburst-tooltip font-montserrat')
             .style('position', 'absolute')
             .style('visibility', 'hidden')
-            .style('background-color', 'white')
-            .style('border', '1px solid #ddd')
+            .style('background-color', '#2f334d') // Dark tooltip background
+            .style('border', '1px solid #414868') // Darker border
             .style('border-radius', '4px')
             .style('padding', '8px')
-            .style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)')
+            .style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)')
             .style('font-size', '12px')
+            .style('font-family', 'var(--font-montserrat)') // Montserrat for tooltip
+            .style('color', '#ffffff') // Bright white text
             .style('pointer-events', 'none');
         
         const root = partition(data);
@@ -84,13 +130,22 @@ const SunburstChart = ({
         };
 
         const getArcFill = d => {
-            if (d.depth === 3) return colorScale(d.data.rating);
+            // Get the borough name from the parent if it's a child node
+            const borough = d.depth === 1 ? d.data.name : 
+                          d.depth === 2 ? d.parent.data.name :
+                          d.depth === 3 ? d.parent.parent.data.name : null;
+
+            if (d.depth === 3) {
+                return getBoroughColorWithRating(borough, d.data.rating);
+            }
             if (d.depth === 2) {
                 const avgRating = d.children ? d3.mean(d.children, child => child.data.rating) : 4.0;
-                return colorScale(avgRating);
+                return getBoroughColorWithRating(borough, avgRating);
             }
-            const avgRating = d.children ? d3.mean(d.children.flatMap(child => child.children ? child.children.map(c => c.data.rating) : [])) : 4.0;
-            return colorScale(avgRating);
+            const avgRating = d.children ? d3.mean(d.children.flatMap(child => 
+                child.children ? child.children.map(c => c.data.rating) : []
+            )) : 4.0;
+            return getBoroughColorWithRating(borough, avgRating);
         };
 
         const isDescendantOrSelf = (node, potentialAncestor) => {
@@ -125,8 +180,10 @@ const SunburstChart = ({
         const centerText = svg.append('text')
             .attr('text-anchor', 'middle')
             .attr('dy', '0.35em')
-            .attr('fill', '#333')
-            .style('font-size', '10px')
+            .attr('fill', '#ffffff') // Bright white text
+            .style('font-size', '10px') // Slightly larger
+            .style('font-weight', '500') // Medium weight for better visibility
+            .style('font-family', 'var(--font-montserrat)') // Montserrat for center text
             .style('pointer-events', 'none');
 
         function updateCenterText() {
@@ -339,7 +396,14 @@ const SunburstChart = ({
                 return 0;
             })
             .attr('dy', '0.35em')
-            .attr('font-size', dNode => dNode.depth === 1 ? '10px' : '8px')
+            .attr('font-size', dNode => {
+                // Larger text for outer rings, smaller for inner
+                if (dNode.depth === 1) return '12px';
+                if (dNode.depth === 2) return '10px';
+                return '9px';
+            })
+            .style('font-family', 'var(--font-montserrat)') // Montserrat for labels
+            .attr('fill', '#ffffff') // Bright white text for maximum contrast
             .text(dNode => dNode.data.name)
             .each(function(dNode) {
                 const self = d3.select(this);
@@ -348,36 +412,54 @@ const SunburstChart = ({
                 }
                 let textLength = self.node().getComputedTextLength();
                 let text = self.text();
-                const arcWidth = (dNode.current.x1 - dNode.current.x0) * ( (dNode.current.y0 + dNode.current.y1) / 2 );
+                
+                // Calculate available space with more conservative margins
+                const arcWidth = (dNode.current.x1 - dNode.current.x0) * ((dNode.current.y0 + dNode.current.y1) / 2);
                 const arcHeight = dNode.current.y1 - dNode.current.y0;
-                const availableSpace = Math.min(arcWidth * 0.8, arcHeight * 2) ; // Adjusted heuristic
+                // More conservative space calculation - using 70% of arc width
+                const availableSpace = Math.min(arcWidth * 0.7, arcHeight * 1.8);
 
+                // If text is too long, try to fit it
                 if (textLength > availableSpace) {
+                    // For very small arcs, don't show text
+                    if (availableSpace < 20) {
+                        self.text('');
+                        return;
+                    }
+                    
+                    // Try to fit text by truncating
                     let newText = text;
                     while (textLength > availableSpace && newText.length > 3) {
-                        newText = newText.slice(0, -2) + '...'; 
+                        newText = newText.slice(0, -1);
+                        if (newText.length <= 10) newText = newText.slice(0, -2) + '...';
                         self.text(newText);
                         textLength = self.node().getComputedTextLength();
-                        if (newText.length <= 3 && newText !== "...") break; 
                     }
-                    if (textLength > availableSpace) self.text(""); // Hide if still too long
+                    
+                    // If still too long, hide it
+                    if (textLength > availableSpace) {
+                        self.text('');
+                    }
                 }
             });
         
         svg.append('circle')
-            .attr('r', radius * 0.15) 
-            .attr('fill', 'white') 
-            .attr('stroke', '#ccc')
+            .attr('r', radius * 0.15)
+            .attr('fill', '#24283b') // Dark center circle
+            .attr('stroke', '#2f334d') // Dark border
             .attr('pointer-events', 'all')
             .attr('cursor', 'pointer')
             .on('click', (event) => clicked(event, root));
         
         svg.append('text')
             .attr('x', 0)
-            .attr('y', -height / 2 + margin.top + 5) 
+            .attr('y', -dimensions.height / 2 + margin.top + 5)
             .attr('text-anchor', 'middle')
-            .style('font-size', '14px') 
-            .style('font-weight', 'bold')
+            .attr('class', 'visualization-title')
+            .style('font-size', '16px') // Larger title
+            .style('font-weight', '600') // Semi-bold
+            .style('font-family', 'var(--font-dm-sans)') // DM Sans for title
+            .style('fill', '#ffffff') // Bright white text
             .text('NYC Restaurant Ratings');
 
         // Handle initial borough selection if any
@@ -392,16 +474,17 @@ const SunburstChart = ({
             tooltipDiv.remove();
             // Any other cleanup, e.g. d3.select(svgRef.current).selectAll('*').remove(); if not handled by effect re-run
         };
-    }, [data, width, height, margin, maxDepth, transitionDuration, selectedBorough, onBoroughSelect]); // Add selectedBorough and onBoroughSelect to dependencies
+    }, [data, margin, maxDepth, transitionDuration, selectedBorough, onBoroughSelect, dimensions]); // Add dimensions to dependencies
 
     return (
-        <div className="sunburst-container" style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <div ref={containerRef} className="sunburst-container" style={{ position: 'relative', width: '100%', height: '100%' }}>
             <svg
                 ref={svgRef}
                 style={{
                     width: '100%',
                     height: '100%',
-                    overflow: 'visible' 
+                    overflow: 'visible',
+                    display: 'block' // Add display block to prevent extra spacing
                 }}
             />
         </div>

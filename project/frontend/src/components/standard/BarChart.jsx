@@ -61,8 +61,7 @@ export default function BarChart({
                 .attr('x', chartWidth / 2)
                 .attr('y', margin.top / 2)
                 .attr('text-anchor', 'middle')
-                .style('font-size', '16px')
-                .style('font-weight', 'bold')
+                .attr('class', 'visualization-title')
                 .text(title);
         }
 
@@ -86,6 +85,7 @@ export default function BarChart({
             .attr('x', innerWidth / 2)
             .attr('y', innerHeight + margin.bottom - 10)
             .attr('text-anchor', 'middle')
+            .attr('class', 'visualization-text')
             .text(xAxisLabel);
 
         // Draw Y axis
@@ -95,10 +95,15 @@ export default function BarChart({
         // Add Y axis label
         g.append('text')
             .attr('transform', 'rotate(-90)')
+            .attr('y', -margin.left + 10)
             .attr('x', -innerHeight / 2)
-            .attr('y', -margin.left + 15)
             .attr('text-anchor', 'middle')
+            .attr('class', 'visualization-text')
             .text(yAxisLabel);
+
+        // Update axis text styles
+        svg.selectAll('.axis text')
+            .attr('class', 'visualization-text');
 
         // Draw bars
         const bars = g.selectAll('.bar')

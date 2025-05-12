@@ -5,26 +5,27 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isInitialRender, setIsInitialRender] = useState(true);
   const containerRef = useRef(null);
 
   // Animation durations
   const TRANSITION_DURATION = 750;
   const HOVER_DURATION = 200;
 
-  // Color scale for boroughs (uppercase for case-insensitive matching)
-  const boroughColors = {
-    'MANHATTAN': '#1f77b4',
-    'BROOKLYN': '#2ca02c',
-    'QUEENS': '#ff7f0e',
-    'BRONX': '#d62728',
-    'STATEN ISLAND': '#9467bd'
+  // Borough color mapping for consistent visualization with softer colors on dark background
+  const BOROUGH_COLORS = {
+    'MANHATTAN': '#7AA2F7', // Soft blue from reference
+    'BROOKLYN': '#F27649', // Warm yellow
+    'QUEENS': '#BB9AF7', // Soft purple from reference
+    'BRONX': '#F7768E', // Soft pink from reference
+    'STATEN ISLAND': '#73DACA' // Cyan from reference
   };
 
   // Case-insensitive borough color getter
   const getBoroughColor = (borough) => {
-    if (!borough) return '#ccc';
+    if (!borough) return '#FF7B5C'; // Warm orange when no borough selected
     const upperBorough = borough.toUpperCase();
-    return boroughColors[upperBorough] || '#ccc';
+    return BOROUGH_COLORS[upperBorough] || '#FF7B5C';
   };
 
   // Case-insensitive borough comparison
@@ -58,7 +59,6 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
         }
         
         const jsonData = await response.json();
-        console.log('Sample feature properties:', jsonData.features[0].properties);
         
         if (!jsonData.type || !jsonData.features || !Array.isArray(jsonData.features)) {
           throw new Error("Invalid GeoJSON data structure");
@@ -95,7 +95,8 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
       .style("padding", "8px")
       .style("font-size", "12px")
       .style("box-shadow", "2px 2px 6px rgba(0, 0, 0, 0.2)")
-      .style("pointer-events", "none");
+      .style("pointer-events", "none")
+      .style("z-index", "1000"); // Ensure tooltip is always on top
 
     // Get container dimensions
     const container = containerRef.current;
@@ -125,23 +126,57 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
       finalWidth = (height * dataAspectRatio) / stretchFactor;
     }
 
-    // Create SVG container with initial scale animation
+    // Create SVG container
     const svg = d3.select(containerRef.current)
       .append("svg")
       .attr("width", "100%")
       .attr("height", "100%")
       .attr("viewBox", `0 0 ${finalWidth} ${finalHeight}`)
-      .style("background-color", "#e6f3ff");
+      .style("background-color", "#24283b"); // Dark blue-gray background
 
-    // Create container for map features with initial animation
+    // Create container for map features
     const mapGroup = svg.append("g")
       .attr("transform", `translate(0, -${finalHeight * 0.1})`)
-      .style("opacity", 0);
+      .style("opacity", isInitialRender ? 0 : 1);
 
-    // Fade in the map
-    mapGroup.transition()
-      .duration(10)
-      .style("opacity", 1);
+    // Create zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([1, 1.5])  // Allow just a bit more zoom for manual interaction
+      .on('zoom', (event) => {
+        mapGroup.attr('transform', event.transform);
+      });
+
+    svg.call(zoom);
+
+    // Function to zoom to a feature
+    const zoomToFeature = (d) => {
+      const bounds = path.bounds(d);
+      const dx = bounds[1][0] - bounds[0][0];
+      const dy = bounds[1][1] - bounds[0][1];
+      const x = (bounds[0][0] + bounds[1][0]) / 2;
+      const y = (bounds[0][1] + bounds[1][1]) / 2;
+      
+      // Use a very mild scale factor (0.2) and add padding to ensure the whole neighborhood is visible
+      const scale = 0.3 / Math.max(dx / finalWidth, dy / finalHeight);
+      const boundedScale = Math.min(scale, 1.2); // Ensure we don't zoom in too much
+      const translate = [
+        finalWidth / 2 - boundedScale * x,
+        finalHeight / 2 - boundedScale * y
+      ];
+
+      svg.transition()
+        .duration(750)
+        .call(zoom.transform, d3.zoomIdentity
+          .translate(translate[0], translate[1])
+          .scale(boundedScale));
+    };
+
+    // Function to reset zoom
+    const resetZoom = () => {
+      svg.transition()
+        .duration(750)
+        .call(zoom.transform, d3.zoomIdentity);
+    };
 
     // Create a projection that fits the data
     const projection = d3.geoIdentity()
@@ -157,7 +192,7 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
       .enter()
       .append("path")
       .attr("d", path)
-      .style("opacity", 0)
+      .style("opacity", 0) // Start with opacity 0 for all updates
       .attr("fill", d => {
         const borough = d.properties.BoroName;
         // Highlight selected borough
@@ -166,17 +201,21 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
         }
         return getBoroughColor(borough);
       })
-      .attr("stroke", "white")
+      .attr("stroke", "#2f334d") // Darker border color
       .attr("stroke-width", d => {
         const borough = d.properties.BoroName;
         return isSameBorough(selectedBorough, borough) ? 2 : 1;
       })
-      .style("cursor", "pointer");  // Add pointer cursor
+      .style("cursor", "pointer");
 
-    // Animate regions appearing
+    // Always animate regions with staggered delay
     regions.transition()
       .duration(300)
-      .delay((d, i) => i * 10)
+      .delay((d, i) => {
+        // Longer delay for initial render, shorter for updates
+        const baseDelay = isInitialRender ? 10 : 5;
+        return i * baseDelay;
+      })
       .style("opacity", 1);
 
     // Add interactions
@@ -192,6 +231,16 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
             .attr("fill", d3.color(getBoroughColor(borough)).brighter(0.5));
         }
         
+        // Calculate tooltip position to prevent going off-screen
+        const tooltipWidth = 200; // Approximate width
+        const tooltipHeight = 80; // Approximate height
+        const x = event.pageX + tooltipWidth > window.innerWidth 
+          ? event.pageX - tooltipWidth - 10 
+          : event.pageX + 10;
+        const y = event.pageY + tooltipHeight > window.innerHeight
+          ? event.pageY - tooltipHeight - 10
+          : event.pageY + 10;
+        
         tooltip
           .style("visibility", "visible")
           .html(`
@@ -199,13 +248,23 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
             Borough: ${borough}
             ${isSameBorough(selectedBorough, borough) ? '<br/><em>(Selected)</em>' : ''}
           `)
-          .style("left", (event.pageX + 10) + "px")
-          .style("top", (event.pageY - 10) + "px");
+          .style("left", x + "px")
+          .style("top", y + "px");
       })
       .on("mousemove", function(event) {
+        // Calculate tooltip position on move
+        const tooltipWidth = 200;
+        const tooltipHeight = 80;
+        const x = event.pageX + tooltipWidth > window.innerWidth 
+          ? event.pageX - tooltipWidth - 10 
+          : event.pageX + 10;
+        const y = event.pageY + tooltipHeight > window.innerHeight
+          ? event.pageY - tooltipHeight - 10
+          : event.pageY + 10;
+        
         tooltip
-          .style("left", (event.pageX + 10) + "px")
-          .style("top", (event.pageY - 10) + "px");
+          .style("left", x + "px")
+          .style("top", y + "px");
       })
       .on("mouseout", function(event, d) {
         const borough = d.properties.BoroName;
@@ -223,11 +282,12 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
       .on("click", function(event, d) {
         const borough = d.properties.BoroName;
         
-        // Toggle selection using the prop function
         if (isSameBorough(selectedBorough, borough)) {
           onBoroughSelect(null);
+          resetZoom();
         } else {
           onBoroughSelect(borough);
+          zoomToFeature(d);
         }
       });
 
@@ -241,28 +301,40 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
       }
     });
 
+    // If there's a selected borough on mount/update, zoom to it
+    if (selectedBorough && !isInitialRender) {
+      const selectedFeature = data.features.find(d => 
+        isSameBorough(d.properties.BoroName, selectedBorough)
+      );
+      if (selectedFeature) {
+        zoomToFeature(selectedFeature);
+      }
+    }
+
     // Add a legend with animation
     const legendPadding = 10;
     const legendGroup = svg.append("g")
       .attr("transform", `translate(${legendPadding}, ${legendPadding})`)
-      .style("opacity", 0);
+      .style("opacity", isInitialRender ? 0 : 1);
 
     // Add white background to legend
     legendGroup.append("rect")
       .attr("width", 120)
-      .attr("height", Object.keys(boroughColors).length * 20 + legendPadding * 2)
-      .attr("fill", "white")
+      .attr("height", Object.keys(BOROUGH_COLORS).length * 20 + legendPadding * 2)
+      .attr("fill", "#24283b") // Dark background for legend
       .attr("opacity", 0.9)
-      .attr("rx", 5);
+      .attr("rx", 5)
+      .attr("stroke", "#2f334d") // Border color
+      .attr("stroke-width", 1);
 
     // Add legend items with faster staggered animation
     const legend = legendGroup.append("g")
       .attr("transform", `translate(${legendPadding}, ${legendPadding})`);
 
-    Object.entries(boroughColors).forEach(([borough, color], i) => {
+    Object.entries(BOROUGH_COLORS).forEach(([borough, color], i) => {
       const legendRow = legend.append("g")
         .attr("transform", `translate(0, ${i * 20})`)
-        .style("opacity", 0);
+        .style("opacity", isInitialRender ? 0 : 1);
 
       legendRow.append("rect")
         .attr("width", 15)
@@ -273,19 +345,28 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
         .attr("x", 20)
         .attr("y", 12)
         .style("font-size", "12px")
+        .style("fill", "#a9b1d6") // Softer text color
         .text(borough);
 
-      // Animate each legend row faster
-      legendRow.transition()
-        .duration(300)
-        .delay(i * 20)  // Reduced stagger delay
-        .style("opacity", 1);
+      // Animate each legend row faster only on initial render
+      if (isInitialRender) {
+        legendRow.transition()
+          .duration(300)
+          .delay(i * 20)
+          .style("opacity", 1);
+      }
     });
 
-    // Fade in the legend
-    legendGroup.transition()
-      .duration(300)
-      .style("opacity", 1);
+    // Fade in the legend only on initial render
+    legendGroup.style("opacity", isInitialRender ? 0 : 1);
+    if (isInitialRender) {
+      legendGroup.transition()
+        .duration(300)
+        .style("opacity", 1);
+    }
+
+    // Set isInitialRender to false after first render
+    setIsInitialRender(false);
   };
 
   // Set up D3 visualization
@@ -298,9 +379,9 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
       <div 
         ref={containerRef}
         className="w-full h-full flex items-center justify-center"
-        style={{ minHeight: '500px' }}
+        style={{ minHeight: '500px', backgroundColor: '#24283b' }}
       >
-        <p className="text-gray-500">Loading map data...</p>
+        <p className="text-[#787c99]">Loading map data...</p>
       </div>
     );
   }
@@ -310,12 +391,12 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
       <div 
         ref={containerRef}
         className="w-full h-full flex flex-col items-center justify-center"
-        style={{ minHeight: '500px' }}
+        style={{ minHeight: '500px', backgroundColor: '#24283b' }}
       >
-        <p className="text-red-500 mb-2 font-bold">Error loading map data:</p>
-        <p className="text-red-500">{error}</p>
+        <p className="text-[#a9b1d6] mb-2 font-bold">Error loading map data:</p>
+        <p className="text-[#a9b1d6]">{error}</p>
         <button 
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="mt-4 px-4 py-2 bg-[#7aa2f7] text-white rounded hover:bg-[#81A1C1]"
           onClick={() => window.location.reload()}
         >
           Retry
@@ -328,19 +409,19 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
     <div 
       ref={containerRef}
       className="w-full h-full"
-      style={{ minHeight: '500px' }}
+      style={{ minHeight: '500px', backgroundColor: '#24283b' }}
     >
       {selectedBorough && (
         <div 
-          className="absolute top-4 right-4 bg-white p-2 rounded shadow"
+          className="absolute top-4 right-4 bg-[#24283b] p-2 rounded shadow border border-[#2f334d]"
           style={{ zIndex: 1000 }}
         >
-          Selected: {selectedBorough}
+          <span className="text-[#a9b1d6]">Selected: {selectedBorough}</span>
           <button 
             onClick={() => {
               onBoroughSelect(null);
             }}
-            className="ml-2 px-2 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+            className="ml-2 px-2 py-1 text-sm bg-[#7aa2f7] text-white rounded hover:bg-[#81A1C1]"
           >
             Clear
           </button>

@@ -84,8 +84,7 @@ export default function PieChart({
                 .attr('x', chartWidth / 2)
                 .attr('y', margin.top / 2)
                 .attr('text-anchor', 'middle')
-                .style('font-size', '16px')
-                .style('font-weight', 'bold')
+                .attr('class', 'visualization-title')
                 .text(title);
         }
 
@@ -197,8 +196,16 @@ export default function PieChart({
                 .attr('y', 10)
                 .attr('text-anchor', 'start')
                 .style('font-size', '12px')
-                .text(d => `${d.label}`);
+                .attr('class', 'visualization-text')
+                .text(d => d.label);
         }
+
+        // Add percentage labels with visualization-text class
+        arcs.append('text')
+            .attr('transform', d => `translate(${arc.centroid(d)})`)
+            .attr('text-anchor', 'middle')
+            .attr('class', 'visualization-text')
+            .text(d => `${Math.round(d.value / d3.sum(data, d => d.value) * 100)}%`);
 
     }, [data, margin, innerRadius, padAngle, cornerRadius, title, colorScale, transitionDuration, showLegend, legendPosition, dimensions]);
 

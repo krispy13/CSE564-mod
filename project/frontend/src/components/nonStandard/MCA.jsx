@@ -145,6 +145,7 @@ export default function MCA({
                 .attr("transform", `translate(${innerWidth / 2}, ${innerHeight + margin.bottom - 12})`)
                 .style("text-anchor", "middle")
                 .style("font-size", "12px")
+                .style("fill", "#a9b1d6")
                 .text(xAxisLabel);
         }
 
@@ -152,20 +153,37 @@ export default function MCA({
         if (yAxisLabel) {
             svg.append("text")
                 .attr("transform", "rotate(-90)")
-                .attr("y", -margin.left) // Increased offset from -margin.left + 15
+                .attr("y", -margin.left)
                 .attr("x", -(innerHeight / 2))
                 .attr("dy", "1em")
                 .style("text-anchor", "middle")
                 .style("font-size", "12px")
+                .style("fill", "#a9b1d6")
                 .text(yAxisLabel);
         }
+
+        // Update axis text colors
+        svg.selectAll(".tick text")
+            .style("fill", "#787c99");
 
         // Create a color scale based on categories if they exist
         const categories = [...new Set(data.map(d => d.category).filter(Boolean))];
 
-        const colorScale = d3.scaleOrdinal()
-            .domain(categories)
-            .range(d3.schemeCategory10);
+        // Borough color mapping for consistent visualization with softer colors on dark background
+        const BOROUGH_COLORS = {
+            'MANHATTAN': '#7AA2F7', // Soft blue from reference
+            'BROOKLYN': '#E0AF68', // Warm yellow
+            'QUEENS': '#BB9AF7', // Soft purple from reference
+            'BRONX': '#F7768E', // Soft pink from reference
+            'STATEN ISLAND': '#73DACA' // Cyan from reference
+        };
+
+        const colorScale = (category) => {
+            if (category && BOROUGH_COLORS[category.toUpperCase()]) {
+                return BOROUGH_COLORS[category.toUpperCase()];
+            }
+            return '#FF7B5C'; // Warm orange for non-borough categories
+        };
 
         // Create a title group for title and/or legend
         const titleGroup = svg.append("g")
@@ -179,6 +197,7 @@ export default function MCA({
                 .attr("text-anchor", "middle")
                 .style("font-size", "16px")
                 .style("font-weight", "bold")
+                .style("fill", "#a9b1d6")
                 .text(title);
         }
 
@@ -241,6 +260,7 @@ export default function MCA({
                     .attr("y", 14)
                     .style("font-size", "12px")
                     .style("font-weight", "500")
+                    .style("fill", "#a9b1d6")
                     .text(category);
             });
         }
@@ -249,11 +269,12 @@ export default function MCA({
         const tooltip = d3.select("body")
             .append("div")
             .style("position", "absolute")
-            .style("background-color", "white")
-            .style("border", "1px solid #ddd")
+            .style("background-color", "#24283b")
+            .style("border", "1px solid #2f334d")
             .style("border-radius", "4px")
             .style("padding", "8px")
             .style("font-size", "12px")
+            .style("color", "#a9b1d6")
             .style("pointer-events", "none")
             .style("opacity", 0)
             .style("z-index", "1000")
@@ -314,7 +335,7 @@ export default function MCA({
                 .attr("y", d => y(d.dim2) - dotRadius - 5)
                 .attr("text-anchor", "middle")
                 .style("font-size", "10px")
-                .style("fill", "#555")
+                .style("fill", "#787c99")
                 .style("opacity", 0)
                 .text(d => d[labelKey])
                 .transition()
@@ -399,6 +420,7 @@ export default function MCA({
                     .style("font-weight", "bold")
                     .style("fill", d3.color(variableColors(variable)).darker(0.8))
                     .style("opacity", 0)
+                    .style("fill", "#787c99")
                     .text(d => d.category)
                     .transition()
                     .delay(transitionDuration + 500)
@@ -436,6 +458,7 @@ export default function MCA({
                     .attr("y", 5)
                     .style("font-size", "10px")
                     .style("font-weight", "bold")
+                    .style("fill", "#a9b1d6")
                     .text("Variables:");
 
                 variableNames.forEach((variable, i) => {
@@ -453,6 +476,7 @@ export default function MCA({
                         .attr("x", 15)
                         .attr("y", 4)
                         .style("font-size", "9px")
+                        .style("fill", "#a9b1d6")
                         .text(variable);
                 });
             }

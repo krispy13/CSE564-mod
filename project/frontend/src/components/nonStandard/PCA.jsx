@@ -136,24 +136,33 @@ export default function PCA({
                 .style("stroke-dasharray", "3,3");
         }
 
-        // X axis label
+        // Add the title if provided
+        if (title) {
+            titleGroup.append("text")
+                .attr("x", innerWidth / 2)
+                .attr("y", -margin.top / 2)
+                .attr("text-anchor", "middle")
+                .attr("class", "visualization-title")
+                .text(title);
+        }
+
+        // Add axis labels with new font classes
         if (xAxisLabel) {
             svg.append("text")
                 .attr("transform", `translate(${innerWidth / 2}, ${innerHeight + margin.bottom - 5})`)
-                .style("text-anchor", "middle")
-                .style("font-size", "12px")
+                .attr("text-anchor", "middle")
+                .attr("class", "visualization-text")
                 .text(xAxisLabel);
         }
 
-        // Y axis label
         if (yAxisLabel) {
             svg.append("text")
                 .attr("transform", "rotate(-90)")
                 .attr("y", -margin.left + 15)
                 .attr("x", -(innerHeight / 2))
                 .attr("dy", "1em")
-                .style("text-anchor", "middle")
-                .style("font-size", "12px")
+                .attr("text-anchor", "middle")
+                .attr("class", "visualization-text")
                 .text(yAxisLabel);
         }
 
@@ -167,17 +176,6 @@ export default function PCA({
         // Create a title group for title and/or legend
         const titleGroup = svg.append("g")
             .attr("class", "title-group");
-
-        // Add the title if provided
-        if (title) {
-            titleGroup.append("text")
-                .attr("x", innerWidth / 2)
-                .attr("y", -margin.top / 2)
-                .attr("text-anchor", "middle")
-                .style("font-size", "16px")
-                .style("font-weight", "bold")
-                .text(title);
-        }
 
         // Add legend if categories exist
         if (categories.length > 0) {
@@ -301,17 +299,16 @@ export default function PCA({
             .duration(300)
             .attr("r", dotRadius);
 
-        // Add labels if enabled
+        // Update data labels with body font
         if (showLabels) {
             svg.selectAll(".label")
                 .data(data)
                 .enter()
                 .append("text")
-                .attr("class", "label")
+                .attr("class", "visualization-text label")
                 .attr("x", d => x(d.pc1))
                 .attr("y", d => y(d.pc2) - dotRadius - 5)
                 .attr("text-anchor", "middle")
-                .style("font-size", "10px")
                 .style("fill", "#555")
                 .style("opacity", 0)
                 .text(d => d[labelKey])

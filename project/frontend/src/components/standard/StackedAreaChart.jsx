@@ -3,7 +3,7 @@ import * as d3 from 'd3';
 
 const StackedAreaChart = ({
     data,
-    margin = { top: 20, right: 20, bottom: 30, left: 40 },
+    margin = { top: 40, right: 30, bottom: 50, left: 60 },
     xKey = 'hour_of_day',
     yKey = 'incident_count',
     groupKey = 'crime_type',
@@ -49,25 +49,25 @@ const StackedAreaChart = ({
 
         d3.select(svgRef.current).selectAll('*').remove();
 
-        const legendItemHeight = 20;
+        const legendItemHeight = 15;
         const legendPadding = 5;
         const legendItemsPerRow = 5;
         
-        // Get all unique boroughs for the legend
-        const allGroups = [...new Set(data.map(d => d[groupKey]))].sort((a,b) => d3.descending(a,b));
+        // Get all unique boroughs for the legend and sort them in reverse order
+        const allGroups = [...new Set(data.map(d => d[groupKey]))].sort((a,b) => d3.ascending(a,b));
         let legendHeight = 0;
         let legendWidthAdjustment = 0;
 
         if (showLegend) {
             if (legendPosition === 'top' || legendPosition === 'bottom') {
                 const numRows = Math.ceil(allGroups.length / legendItemsPerRow);
-                legendHeight = numRows * legendItemHeight + (numRows > 0 ? legendPadding * 2 : 0);
+                legendHeight = numRows * legendItemHeight + (numRows > 0 ? legendPadding : 0);
             } else if (legendPosition === 'right') {
                 legendWidthAdjustment = 100;
             }
         }
 
-        let currentTopMargin = margin.top;
+        let currentTopMargin = margin.top - legendHeight;
         if (showLegend && legendPosition === 'top') {
             currentTopMargin += legendHeight;
         }
@@ -91,7 +91,8 @@ const StackedAreaChart = ({
             .value((d, key) => {
                 const entry = d[1].find(item => item[groupKey] === key);
                 return entry ? entry[yKey] : 0;
-            });
+            })
+            .order(d3.stackOrderReverse);
 
         const stackedData = stack(Array.from(groupedData).sort((a,b) => d3.ascending(a[0], b[0])));
 
@@ -110,7 +111,7 @@ const StackedAreaChart = ({
             .range([0, width]);
 
         const yScale = d3.scaleLinear()
-            .domain([0, d3.max(stackedData, layer => d3.max(layer, d => d[1]))])
+            .domain([0, selectedBorough ? 1000 : d3.max(stackedData, layer => d3.max(layer, d => d[1]))])
             .range([chartDrawingHeight, 0])
             .nice();
 
@@ -120,7 +121,8 @@ const StackedAreaChart = ({
             .y1(d => yScale(d[1]))
             .curve(d3.curveMonotoneX);
 
-        svg.selectAll('.area-path')
+        // Add data points with animation
+        const paths = svg.selectAll('.area-path')
             .data(stackedData)
             .enter()
             .append('path')
@@ -130,41 +132,64 @@ const StackedAreaChart = ({
                 return typeof colorScale === 'function' ? colorScale(d.key) : colorScale[stackedData.indexOf(d) % colorScale.length];
             })
             .style('cursor', 'pointer')
-            .on('click', function(event, d) {  // Use function to get correct 'this' context
-                event.stopPropagation();
-                if (groupKey === 'borough') {
-                    console.log('StackedAreaChart - Area clicked:', {
-                        key: d.key,
-                        currentlySelected: selectedBorough,
-                        willSelect: selectedBorough && selectedBorough.toLowerCase() === d.key.toLowerCase() ? null : d.key
-                    });
+            .style('opacity', 0);
 
-                    // Highlight the clicked path
-                    const path = d3.select(this);
-                    path.style('stroke', '#000')
-                        .style('stroke-width', '2px');
-                    
-                    // Only handle borough selection if groupKey is 'borough'
-                    if (onBoroughSelect) {
-                        const boroughName = d.key;
-                        if (selectedBorough && selectedBorough.toLowerCase() === boroughName.toLowerCase()) {
-                            onBoroughSelect(null);
-                            // Remove highlight
-                            path.style('stroke', null)
-                                .style('stroke-width', null);
-                        } else {
-                            onBoroughSelect(boroughName);
-                            // Remove highlight from other paths
-                            svg.selectAll('.area-path')
-                                .style('stroke', null)
-                                .style('stroke-width', null);
-                            // Add highlight to selected path
-                            path.style('stroke', '#000')
-                                .style('stroke-width', '2px');
-                        }
+        // Animate each path
+        paths.each(function(d, i) {
+            const path = d3.select(this);
+            const totalLength = path.node().getTotalLength();
+            
+            path
+                .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
+                .attr("stroke-dashoffset", totalLength)
+                .style("opacity", 1)
+                .transition()
+                .duration(1500)
+                .delay(i * 100)
+                .ease(d3.easeLinear)
+                .attr("stroke-dashoffset", 0)
+                .on("end", function() {
+                    // Remove the stroke properties after animation
+                    path.attr("stroke-dasharray", null)
+                        .attr("stroke-dashoffset", null);
+                });
+        });
+
+        paths.on('click', function(event, d) {  // Use function to get correct 'this' context
+            event.stopPropagation();
+            if (groupKey === 'borough') {
+                console.log('StackedAreaChart - Area clicked:', {
+                    key: d.key,
+                    currentlySelected: selectedBorough,
+                    willSelect: selectedBorough && selectedBorough.toLowerCase() === d.key.toLowerCase() ? null : d.key
+                });
+
+                // Highlight the clicked path
+                const path = d3.select(this);
+                path.style('stroke', '#000')
+                    .style('stroke-width', '2px');
+                
+                // Only handle borough selection if groupKey is 'borough'
+                if (onBoroughSelect) {
+                    const boroughName = d.key;
+                    if (selectedBorough && selectedBorough.toLowerCase() === boroughName.toLowerCase()) {
+                        onBoroughSelect(null);
+                        // Remove highlight
+                        path.style('stroke', null)
+                            .style('stroke-width', null);
+                    } else {
+                        onBoroughSelect(boroughName);
+                        // Remove highlight from other paths
+                        svg.selectAll('.area-path')
+                            .style('stroke', null)
+                            .style('stroke-width', null);
+                        // Add highlight to selected path
+                        path.style('stroke', '#000')
+                            .style('stroke-width', '2px');
                     }
                 }
-            });
+            }
+        });
 
         // Add background rect for deselection
         svg.insert('rect', ':first-child')
@@ -203,20 +228,40 @@ const StackedAreaChart = ({
             .style('text-anchor', 'end')
             .attr('dx', '-.8em').attr('dy', '.15em').attr('transform', 'rotate(-45)');
 
-        svg.append('g').call(d3.axisLeft(yScale));
+        // Update y-axis with proper formatting and spacing
+        const yAxis = d3.axisLeft(yScale)
+            .ticks(8)
+            .tickFormat(d3.format(',d'));
 
+        svg.append('g')
+            .call(yAxis)
+            .selectAll('text')
+            .style('font-size', '11px')
+            .attr('dx', '-0.5em');
+
+        // Update axis text colors
+        svg.selectAll('.tick text')
+            .style('fill', '#787c99'); // Muted text color
+
+        // Update x-axis label color
         if (xAxisLabel) {
             svg.append('text')
-                .attr('transform', `translate(${width/2}, ${chartDrawingHeight + margin.bottom -5 + (xScale.domain()[1] > 12 ? 10 : 0) })`)
-                .style('text-anchor', 'middle').text(xAxisLabel);
+                .attr('transform', `translate(${width/2}, ${chartDrawingHeight + margin.bottom - 10})`)
+                .style('text-anchor', 'middle')
+                .style('font-size', '12px')
+                .style('fill', '#a9b1d6') // Softer text color
+                .text(xAxisLabel);
         }
 
-        if (yAxisLabel) {
-            svg.append('text')
-                .attr('transform', 'rotate(-90)')
-                .attr('y', -margin.left + 15).attr('x', -(chartDrawingHeight / 2))
-                .style('text-anchor', 'middle').text(yAxisLabel);
-        }
+        // Update y-axis label color
+        svg.append('text')
+            .attr('transform', 'rotate(-90)')
+            .attr('y', -margin.left + 20)
+            .attr('x', -(chartDrawingHeight / 2))
+            .style('text-anchor', 'middle')
+            .style('font-size', '12px')
+            .style('fill', '#a9b1d6') // Softer text color
+            .text(yAxisLabel);
 
         if (showLegend) {
             const legendGroup = d3.select(svgRef.current).select("g")
@@ -227,7 +272,7 @@ const StackedAreaChart = ({
                 .attr('text-anchor', 'start');
 
             const legend = legendGroup.selectAll('.legend-item')
-                .data(allGroups)  // Use all groups for legend
+                .data(allGroups)
                 .enter()
                 .append('g')
                 .attr('class', 'legend-item')
@@ -236,59 +281,43 @@ const StackedAreaChart = ({
                     if (legendPosition === 'top') {
                         const col = i % legendItemsPerRow;
                         const row = Math.floor(i / legendItemsPerRow);
-                        const itemWidth = (width / legendItemsPerRow);
-                        return `translate(${col * itemWidth}, ${row * legendItemHeight + legendPadding})`;
+                        const itemWidth = Math.floor(width / legendItemsPerRow);
+                        return `translate(${col * itemWidth + 5}, ${row * (legendItemHeight + 2) - 5})`;
                     } else if (legendPosition === 'bottom') {
                         const col = i % legendItemsPerRow;
                         const row = Math.floor(i / legendItemsPerRow);
-                        const itemWidth = (width / legendItemsPerRow);
-                        return `translate(${col * itemWidth}, ${chartDrawingHeight + currentBottomMargin - legendHeight + row * legendItemHeight + legendPadding})`;
+                        const itemWidth = Math.floor(width / legendItemsPerRow);
+                        return `translate(${col * itemWidth + 5}, ${chartDrawingHeight + currentBottomMargin - legendHeight + row * (legendItemHeight + 2)})`;
                     } else {
-                        return `translate(${width + 10},${i * legendItemHeight})`;
-                    }
-                })
-                .on('click', (event, d) => {
-                    event.stopPropagation();
-                    // Debug logs
-                    console.log('Legend click event:', event);
-                    console.log('Legend clicked data:', d);
-                    console.log('Current groupKey:', groupKey);
-                    console.log('Current selectedBorough:', selectedBorough);
-                    
-                    // Only handle borough selection if groupKey is 'borough'
-                    if (onBoroughSelect && groupKey === 'borough') {
-                        // d is the borough name in the legend data
-                        const boroughName = d;
-                        console.log('Borough name from legend click:', boroughName);
-                        
-                        // Toggle selection
-                        if (selectedBorough && selectedBorough.toLowerCase() === boroughName.toLowerCase()) {
-                            onBoroughSelect(null);
-                        } else {
-                            onBoroughSelect(boroughName);
-                        }
+                        return `translate(${width + 15},${i * (legendItemHeight + 2)})`;
                     }
                 });
 
             legend.append('rect')
                 .attr('x', 0)
-                .attr('width', 19)
-                .attr('height', 19)
+                .attr('width', 12)
+                .attr('height', 12)
                 .attr('fill', d => typeof colorScale === 'function' ? colorScale(d) : colorScale[allGroups.indexOf(d) % colorScale.length]);
 
             legend.append('text')
-                .attr('x', 24)
-                .attr('y', 9.5)
-                .attr('dy', '0.32em')
+                .attr('x', 16)
+                .attr('y', 9)
+                .style('font-size', '10px')
+                .style('fill', '#a9b1d6') // Softer text color
                 .text(d => d);
         }
         
         const tooltip = d3.select("body").append("div")
             .attr("class", "stacked-area-tooltip")
-            .style("position", "absolute").style("visibility", "hidden")
-            .style("background-color", "white").style("border", "solid")
-            .style("border-width", "1px").style("border-radius", "5px")
-            .style("padding", "10px").style("font-size", "12px")
+            .style("position", "absolute")
+            .style("visibility", "hidden")
+            .style("background-color", "#24283b") // Dark background
+            .style("border", "1px solid #2f334d") // Dark border
+            .style("border-width", "1px")
+            .style("border-radius", "5px")
+            .style("padding", "10px")
+            .style("font-size", "12px")
+            .style("color", "#a9b1d6") // Softer text color
             .style("pointer-events", "none");
 
         const bisectDate = d3.bisector(d => d.data[0]).left;

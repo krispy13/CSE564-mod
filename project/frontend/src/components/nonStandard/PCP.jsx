@@ -6,7 +6,7 @@ export default function PCP({
     dimensions = [],
     width,
     height,
-    margin = { top: 50, right: 50, bottom: 50, left: 50 },
+    margin = { top: 40, right: 50, bottom: 50, left: 50 },
     lineColor = "#4F46E5",
     lineHoverColor = "#818CF8",
     lineOpacity = 0.2, // Changed from 0.5
@@ -117,23 +117,36 @@ export default function PCP({
             return rawValue;
         };
 
-        let getColor;
-        const categories = [...new Set(data.map(d => d[categoryAttribute]).filter(cat => cat !== undefined && cat !== null))];
-        if (colorByCategory) {
-            getColor = colorScale || ((category) => {
-                // Fallback to d3 category colors if no colorScale provided
-                return d3.schemeCategory10[categories.indexOf(category) % 10];
-            });
-        }
+        // Borough color mapping for consistent visualization with softer colors on dark background
+        const BOROUGH_COLORS = {
+            'MANHATTAN': '#7AA2F7', // Soft blue from reference
+            'BROOKLYN': '#E0AF68', // Warm yellow
+            'QUEENS': '#BB9AF7', // Soft purple from reference
+            'BRONX': '#F7768E', // Soft pink from reference
+            'STATEN ISLAND': '#73DACA' // Cyan from reference
+        };
 
-        const tooltip = d3.select("body").append("div")
+        const categories = [...new Set(data.map(d => d[categoryAttribute]).filter(cat => cat !== undefined && cat !== null))].sort((a,b) => d3.ascending(a,b));
+
+        const getColor = colorScale || ((category) => {
+            // Use our borough colors if the category is a borough
+            if (category && BOROUGH_COLORS[category.toUpperCase()]) {
+                return BOROUGH_COLORS[category.toUpperCase()];
+            }
+            // Default to warm orange if not a borough
+            return '#FF7B5C';
+        });
+
+        const tooltip = d3.select("body")
+            .append("div")
             .attr("class", "tooltip")
             .style("position", "absolute")
-            .style("background", "white")
-            .style("border", "1px solid #ddd")
+            .style("background-color", "#24283b")
+            .style("border", "1px solid #2f334d")
             .style("border-radius", "4px")
             .style("padding", "8px")
             .style("font-size", "12px")
+            .style("color", "#a9b1d6")
             .style("pointer-events", "none")
             .style("opacity", 0)
             .style("z-index", "1000")
@@ -149,12 +162,19 @@ export default function PCP({
                 .call(g => {
                     g.select(".domain").attr("stroke-opacity", 0.5);
                     g.selectAll(".tick line").attr("stroke-opacity", 0.5);
-                })
-                .append("text")
-                .attr("y", -10)
+                });
+
+            // Update axis text colors
+            svg.selectAll(".tick text")
+                .style("fill", "#787c99");
+
+            // Add axis label at the bottom with updated color
+            svg.append("text")
+                .attr("x", x(dimension.name))
+                .attr("y", innerHeight + 30)
                 .attr("text-anchor", "middle")
-                .attr("fill", "#000")
-                .attr("transform", "rotate(-45)")
+                .style("fill", "#a9b1d6")
+                .style("font-size", "11px")
                 .text(dimension.label || dimension.name);
         });
 
@@ -165,19 +185,19 @@ export default function PCP({
                 .attr("text-anchor", "middle")
                 .style("font-size", "16px")
                 .style("font-weight", "bold")
+                .style("fill", "#a9b1d6")
                 .text(title);
         }
 
-        if (colorByCategory && categories.length > 0) {
-            const legendItemWidth = 120;
-            const legendX = 10;
-            const legendY = innerHeight + margin.bottom / 2;
+        if (colorByCategory) {
+            const legendItemWidth = Math.floor(innerWidth / categories.length);
+            const legendY = -margin.top + 15;
 
             svg.append("rect")
-                .attr("x", legendX - 10)
-                .attr("y", legendY - 15)
-                .attr("width", Math.min(categories.length * legendItemWidth, innerWidth * 0.9))
-                .attr("height", 30)
+                .attr("x", 0)
+                .attr("y", legendY - 12)
+                .attr("width", innerWidth)
+                .attr("height", 24)
                 .attr("fill", "white")
                 .attr("stroke", "#ccc")
                 .attr("stroke-width", 1)
@@ -186,7 +206,7 @@ export default function PCP({
 
             const legend = svg.append("g")
                 .attr("class", "legend")
-                .attr("transform", `translate(${legendX}, ${legendY})`);
+                .attr("transform", `translate(5, ${legendY})`);
 
             categories.forEach((category, i) => {
                 const legendItem = legend.append("g")
@@ -199,15 +219,25 @@ export default function PCP({
                     });
 
                 legendItem.append("line")
-                    .attr("x1", 0).attr("y1", 0).attr("x2", 15).attr("y2", 0)
+                    .attr("x1", 0)
+                    .attr("y1", 0)
+                    .attr("x2", 12)
+                    .attr("y2", 0)
                     .attr("stroke", getColor(category))
                     .attr("stroke-width", 2);
 
                 legendItem.append("text")
-                    .attr("x", 20).attr("y", 4)
-                    .style("font-size", "12px").style("font-weight", "500")
+                    .attr("x", 16)
+                    .attr("y", 4)
+                    .style("font-size", "10px")
+                    .style("font-weight", "500")
+                    .style("fill", "#a9b1d6")
                     .text(category);
             });
+
+            // Update legend text colors
+            legend.selectAll("text")
+                .style("fill", "#a9b1d6");
         }
 
         const lineGenerator = d3.line()
@@ -366,7 +396,7 @@ export default function PCP({
                 });
         }
 
-        dimensions.forEach((dimension, i_dim) => {
+        dimensions.forEach(dimension => {
             const dimensionG = svg.append("g")
                 .attr("class", "brush")
                 .attr("transform", `translate(${x(dimension.name)},0)`);
@@ -377,15 +407,15 @@ export default function PCP({
 
             dimensionG.call(brush);
 
-            function brushed(event) {
+            function brushed() {
                 const activeBrushes = [];
-                svg.selectAll(".brush").each(function (d_brush_unused, i_brush_idx) { // Use index to get current dimension
+                svg.selectAll(".brush").each(function(_, i) {
                     const selection = d3.brushSelection(this);
                     if (selection) {
-                        const currentDimensionName = dimensions[i_brush_idx].name;
+                        const currentDimensionName = dimensions[i].name;
                         activeBrushes.push({
                             dimension: currentDimensionName,
-                            extent: selection.map(pixelVal => y[currentDimensionName].invert(pixelVal)) // extent is in the domain of y-scale ([0,1] or original)
+                            extent: selection.map(pixelVal => y[currentDimensionName].invert(pixelVal))
                         });
                     }
                 });
@@ -412,7 +442,7 @@ export default function PCP({
                             break;
                         }
                     }
-                    return visible ? lineOpacity : 0.03; // Changed from 0.1 to 0.03 for better fade
+                    return visible ? lineOpacity : 0.03;
                 });
             }
         });

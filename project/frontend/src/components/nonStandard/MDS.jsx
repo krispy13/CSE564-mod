@@ -144,6 +144,7 @@ export default function MDS({
                 .attr("transform", `translate(${innerWidth / 2}, ${innerHeight + margin.bottom - 5})`)
                 .style("text-anchor", "middle")
                 .style("font-size", "12px")
+                .style("fill", "#a9b1d6")
                 .text(xAxisLabel);
         }
 
@@ -151,21 +152,38 @@ export default function MDS({
         if (yAxisLabel) {
             svg.append("text")
                 .attr("transform", "rotate(-90)")
-                .attr("y", -margin.left + 15)  // Increase this value to move label further from axis
+                .attr("y", -margin.left + 15)
                 .attr("x", -(innerHeight / 2))
                 .attr("dy", "1em")
                 .style("text-anchor", "middle")
                 .style("font-size", "12px")
+                .style("fill", "#a9b1d6")
                 .text(yAxisLabel);
         }
+
+        // Update axis text colors
+        svg.selectAll(".tick text")
+            .style("fill", "#787c99");
 
         // Create a color scale based on categories if they exist
         const categories = [...new Set(data.map(d => d.category).filter(Boolean))];
         console.log("Categories found:", categories); // Add this for debugging
 
-        const colorScale = d3.scaleOrdinal()
-            .domain(categories)
-            .range(d3.schemeCategory10);
+        // Borough color mapping for consistent visualization with softer colors on dark background
+        const boroughColors = {
+            'MANHATTAN': '#7AA2F7', // Soft blue from reference
+            'BROOKLYN': '#A3BE8C', // Keep our existing soft green
+            'QUEENS': '#BB9AF7', // Soft purple from reference
+            'BRONX': '#F7768E', // Soft pink from reference
+            'STATEN ISLAND': '#73DACA' // Cyan from reference
+        };
+
+        const colorScale = (category) => {
+            if (category && boroughColors[category.toUpperCase()]) {
+                return boroughColors[category.toUpperCase()];
+            }
+            return '#EBCB8B'; // Neutral yellow for non-borough categories
+        };
 
         // Create a title group for title and/or legend
         const titleGroup = svg.append("g")
@@ -179,6 +197,7 @@ export default function MDS({
                 .attr("text-anchor", "middle")
                 .style("font-size", "16px")
                 .style("font-weight", "bold")
+                .style("fill", "#a9b1d6")
                 .text(title);
         }
 
@@ -249,6 +268,7 @@ export default function MDS({
                     .attr("y", 14)
                     .style("font-size", "12px")
                     .style("font-weight", "500")
+                    .style("fill", "#a9b1d6")
                     .text(category);
             });
         }
@@ -257,11 +277,12 @@ export default function MDS({
         const tooltip = d3.select("body")
             .append("div")
             .style("position", "absolute")
-            .style("background-color", "white")
-            .style("border", "1px solid #ddd")
+            .style("background-color", "#24283b")
+            .style("border", "1px solid #2f334d")
             .style("border-radius", "4px")
             .style("padding", "8px")
             .style("font-size", "12px")
+            .style("color", "#a9b1d6")
             .style("pointer-events", "none")
             .style("opacity", 0)
             .style("transition", "opacity 0.2s");
@@ -319,7 +340,7 @@ export default function MDS({
                 .attr("y", d => y(d.y) - dotRadius - 5)
                 .attr("text-anchor", "middle")
                 .style("font-size", "10px")
-                .style("fill", "#555")
+                .style("fill", "#787c99")
                 .style("opacity", 0)
                 .text(d => d[labelKey])
                 .transition()

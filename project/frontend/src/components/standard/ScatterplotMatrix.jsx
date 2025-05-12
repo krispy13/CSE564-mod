@@ -71,8 +71,7 @@ export default function ScatterplotMatrix({
                 .attr('x', chartWidth / 2)
                 .attr('y', margin.top / 2)
                 .attr('text-anchor', 'middle')
-                .style('font-size', '16px')
-                .style('font-weight', 'bold')
+                .attr('class', 'visualization-title')
                 .text(title);
         }
 
@@ -171,7 +170,7 @@ export default function ScatterplotMatrix({
                 // Add X-axis label
                 if (showLabels) {
                     cellGroup.append('text')
-                        .attr('class', 'x label')
+                        .attr('class', 'visualization-text x-label')
                         .attr('text-anchor', 'middle')
                         .attr('x', size / 2)
                         .attr('y', size + padding + 10) // Increased vertical spacing
@@ -182,10 +181,10 @@ export default function ScatterplotMatrix({
                         .text(d.x);
 
                     // Add a background rectangle for better label visibility
-                    const textNode = cellGroup.select('.x.label').node();
+                    const textNode = cellGroup.select('.x-label').node();
                     if (textNode) {
                         const bbox = textNode.getBBox();
-                        cellGroup.insert('rect', '.x.label')
+                        cellGroup.insert('rect', '.x-label')
                             .attr('x', bbox.x - 2)
                             .attr('y', bbox.y - 2)
                             .attr('width', bbox.width + 4)
@@ -227,13 +226,9 @@ export default function ScatterplotMatrix({
                 // Add Y-axis label
                 if (showLabels) {
                     cellGroup.append('text')
-                        .attr('class', 'y label')
+                        .attr('class', 'visualization-text y-label')
+                        .attr('transform', `rotate(-90) translate(${-size/2}, ${-padding})`)
                         .attr('text-anchor', 'middle')
-                        .attr('y', -padding)
-                        .attr('x', -size / 2)
-                        .attr('transform', 'rotate(-90)')
-                        .attr('font-size', Math.max(8, Math.min(12, size / 20)) + 'px')
-                        .attr('font-weight', 'bold') // Make labels bold
                         .text(d.y);
                 }
 
@@ -336,6 +331,46 @@ export default function ScatterplotMatrix({
             });
             return result;
         }
+
+        // Update axis text styles
+        cell.each(function(d) {
+            const cellGroup = d3.select(this);
+
+            // Add axis labels
+            if (d.i === dimensions.length - 1) {
+                cellGroup.append('text')
+                    .attr('class', 'visualization-text x-label')
+                    .attr('text-anchor', 'middle')
+                    .attr('x', size / 2)
+                    .attr('y', size + padding + 10)
+                    .text(d.x);
+            }
+
+            if (d.j === 0) {
+                cellGroup.append('text')
+                    .attr('class', 'visualization-text y-label')
+                    .attr('transform', `rotate(-90) translate(${-size/2}, ${-padding})`)
+                    .attr('text-anchor', 'middle')
+                    .text(d.y);
+            }
+
+            // Update axis text styles
+            cellGroup.selectAll('.axis text')
+                .attr('class', 'visualization-text');
+        });
+
+        // Update tooltip styles
+        const tooltip = d3.select('body')
+            .append('div')
+            .attr('class', 'scatterplot-tooltip visualization-text')
+            .style('position', 'absolute')
+            .style('visibility', 'hidden')
+            .style('background-color', 'white')
+            .style('border', '1px solid #ddd')
+            .style('border-radius', '4px')
+            .style('padding', '8px')
+            .style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)')
+            .style('pointer-events', 'none');
 
     }, [data, dimensions, margin, padding, dotColor, dotHoverColor, dotRadius, title, transitionDuration, showLabels, containerDimensions]);
 
