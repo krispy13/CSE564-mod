@@ -630,6 +630,9 @@ def get_nta_geojson():
             print("Error: No features found in GeoJSON")
             return {"error": "No features found in GeoJSON", "type": "FeatureCollection", "features": []}
         
+        # Count features before validation
+        feature_count_before = len(geojson_data['features'])
+        
         valid_features = []
         # Validate each feature has required properties
         for i, feature in enumerate(geojson_data['features']):
@@ -679,7 +682,7 @@ def get_nta_geojson():
         # Replace features with only valid ones
         geojson_data['features'] = valid_features
             
-        print(f"Successfully loaded GeoJSON with {len(valid_features)} valid features")
+        print(f"Successfully loaded GeoJSON with {len(valid_features)} valid features out of {feature_count_before} total features")
         return geojson_data
     except FileNotFoundError:
         print(f"Error: GeoJSON file not found at {nta_geojson_path}")

@@ -109,10 +109,23 @@ async def get_nta_geo_data():
     """
     Returns NYC Neighborhood Tabulation Areas (NTA) GeoJSON data for mapping.
     """
-    geojson_data = get_nta_geojson()
-    if geojson_data is None:
-        return {"error": "Failed to load NTA GeoJSON data"}
-    return geojson_data
+    try:
+        geojson_data = get_nta_geojson()
+        
+        # Check if there's an error or if the data is invalid
+        if isinstance(geojson_data, dict) and 'error' in geojson_data:
+            return geojson_data
+        
+        if not isinstance(geojson_data, dict) or 'type' not in geojson_data or 'features' not in geojson_data:
+            return {"error": "Invalid GeoJSON structure", "type": "FeatureCollection", "features": []}
+            
+        if not geojson_data['features'] or len(geojson_data['features']) == 0:
+            return {"error": "No features found in GeoJSON", "type": "FeatureCollection", "features": []}
+            
+        return geojson_data
+    except Exception as e:
+        print(f"Unexpected error in get_nta_geo_data endpoint: {str(e)}")
+        return {"error": f"Server error: {str(e)}", "type": "FeatureCollection", "features": []}
 
 @app.get("/")
 async def root():

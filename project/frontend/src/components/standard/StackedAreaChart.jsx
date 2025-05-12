@@ -8,16 +8,44 @@ const StackedAreaChart = ({
     yKey = 'incident_count',
     groupKey = 'crime_type',
     colorScale = d3.schemeSet2,
-    transitionDuration = 800,
     showLegend = true,
     legendPosition = 'top',
     xAxisLabel = '',
-    yAxisLabel = ''
+    yAxisLabel = '',
+    selectedBorough = null,
+    onBoroughSelect = null
 }) => {
     const svgRef = useRef();
 
     useEffect(() => {
         if (!data || !data.length) return;
+
+        // Debug log to check data structure
+        if (groupKey === 'borough') {
+            console.log('StackedAreaChart - Initial data sample:', data.slice(0, 2));
+            console.log('StackedAreaChart - Current selected borough:', selectedBorough);
+        }
+
+        // Filter data if borough is selected (case-insensitive)
+        const filteredData = selectedBorough 
+            ? data.filter(d => d.borough && d.borough.toLowerCase() === selectedBorough.toLowerCase())
+            : data;
+
+        if (groupKey === 'borough') {
+            console.log('StackedAreaChart - Filtered data length:', filteredData.length);
+        }
+
+        if (filteredData.length === 0) {
+            // Handle empty data case
+            const svg = d3.select(svgRef.current);
+            svg.selectAll('*').remove();
+            svg.append('text')
+                .attr('x', svgRef.current.clientWidth / 2)
+                .attr('y', svgRef.current.clientHeight / 2)
+                .attr('text-anchor', 'middle')
+                .text(`No data available${selectedBorough ? ` for ${selectedBorough}` : ''}`);
+            return;
+        }
 
         d3.select(svgRef.current).selectAll('*').remove();
 
@@ -25,13 +53,14 @@ const StackedAreaChart = ({
         const legendPadding = 5;
         const legendItemsPerRow = 5;
         
-        const groups = [...new Set(data.map(d => d[groupKey]))].sort((a,b) => d3.descending(a,b));
+        // Get all unique boroughs for the legend
+        const allGroups = [...new Set(data.map(d => d[groupKey]))].sort((a,b) => d3.descending(a,b));
         let legendHeight = 0;
         let legendWidthAdjustment = 0;
 
         if (showLegend) {
             if (legendPosition === 'top' || legendPosition === 'bottom') {
-                const numRows = Math.ceil(groups.length / legendItemsPerRow);
+                const numRows = Math.ceil(allGroups.length / legendItemsPerRow);
                 legendHeight = numRows * legendItemHeight + (numRows > 0 ? legendPadding * 2 : 0);
             } else if (legendPosition === 'right') {
                 legendWidthAdjustment = 100;
@@ -43,7 +72,7 @@ const StackedAreaChart = ({
             currentTopMargin += legendHeight;
         }
         let currentBottomMargin = margin.bottom;
-         if (showLegend && legendPosition === 'bottom') {
+        if (showLegend && legendPosition === 'bottom') {
             currentBottomMargin += legendHeight;
         }
 
@@ -56,15 +85,25 @@ const StackedAreaChart = ({
             .append('g')
             .attr('transform', `translate(${margin.left},${currentTopMargin})`);
 
-        const groupedData = d3.group(data, d => d[xKey]);
+        const groupedData = d3.group(filteredData, d => d[xKey]);
         const stack = d3.stack()
-            .keys(groups)
+            .keys([...new Set(filteredData.map(d => d[groupKey]))])
             .value((d, key) => {
                 const entry = d[1].find(item => item[groupKey] === key);
                 return entry ? entry[yKey] : 0;
             });
 
         const stackedData = stack(Array.from(groupedData).sort((a,b) => d3.ascending(a[0], b[0])));
+
+        if (groupKey === 'borough') {
+            console.log('StackedAreaChart - Stacked data structure:', 
+                stackedData.map(d => ({ key: d.key, dataPoints: d.length }))
+            );
+        }
+
+        // Debug logs for data structure
+        console.log('Stacked Data Structure:', stackedData);
+        console.log('First stacked item:', stackedData[0]);
 
         const xScale = d3.scaleLinear()
             .domain(d3.extent(Array.from(groupedData.keys()).map(k => +k)))
@@ -75,22 +114,80 @@ const StackedAreaChart = ({
             .range([chartDrawingHeight, 0])
             .nice();
 
-        const color = d3.scaleOrdinal().domain(groups).range(colorScale);
-
         const area = d3.area()
             .x(d => xScale(d.data[0]))
             .y0(d => yScale(d[0]))
             .y1(d => yScale(d[1]))
             .curve(d3.curveMonotoneX);
 
-        const paths = svg.selectAll('.area-path')
+        svg.selectAll('.area-path')
             .data(stackedData)
             .enter()
             .append('path')
             .attr('class', 'area-path')
             .attr('d', area)
-            .style('fill', (d) => color(d.key))
-            .style('opacity', 0.8);
+            .style('fill', (d) => {
+                return typeof colorScale === 'function' ? colorScale(d.key) : colorScale[stackedData.indexOf(d) % colorScale.length];
+            })
+            .style('cursor', 'pointer')
+            .on('click', function(event, d) {  // Use function to get correct 'this' context
+                event.stopPropagation();
+                if (groupKey === 'borough') {
+                    console.log('StackedAreaChart - Area clicked:', {
+                        key: d.key,
+                        currentlySelected: selectedBorough,
+                        willSelect: selectedBorough && selectedBorough.toLowerCase() === d.key.toLowerCase() ? null : d.key
+                    });
+
+                    // Highlight the clicked path
+                    const path = d3.select(this);
+                    path.style('stroke', '#000')
+                        .style('stroke-width', '2px');
+                    
+                    // Only handle borough selection if groupKey is 'borough'
+                    if (onBoroughSelect) {
+                        const boroughName = d.key;
+                        if (selectedBorough && selectedBorough.toLowerCase() === boroughName.toLowerCase()) {
+                            onBoroughSelect(null);
+                            // Remove highlight
+                            path.style('stroke', null)
+                                .style('stroke-width', null);
+                        } else {
+                            onBoroughSelect(boroughName);
+                            // Remove highlight from other paths
+                            svg.selectAll('.area-path')
+                                .style('stroke', null)
+                                .style('stroke-width', null);
+                            // Add highlight to selected path
+                            path.style('stroke', '#000')
+                                .style('stroke-width', '2px');
+                        }
+                    }
+                }
+            });
+
+        // Add background rect for deselection
+        svg.insert('rect', ':first-child')
+            .attr('class', 'background')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', width)
+            .attr('height', chartDrawingHeight)
+            .style('fill', 'transparent')
+            .style('cursor', 'pointer')
+            .on('click', () => {
+                if (groupKey === 'borough') {
+                    console.log('StackedAreaChart - Background clicked, deselecting borough');
+                    // Remove highlight from all paths
+                    svg.selectAll('.area-path')
+                        .style('stroke', null)
+                        .style('stroke-width', null);
+                }
+                // Only handle deselection if groupKey is 'borough'
+                if (onBoroughSelect && selectedBorough && groupKey === 'borough') {
+                    onBoroughSelect(null);
+                }
+            });
 
         const xAxis = d3.axisBottom(xScale)
             .ticks(Math.min(24, (xScale.domain()[1] - xScale.domain()[0] || 0) +1 )) 
@@ -130,10 +227,11 @@ const StackedAreaChart = ({
                 .attr('text-anchor', 'start');
 
             const legend = legendGroup.selectAll('.legend-item')
-                .data(groups)
+                .data(allGroups)  // Use all groups for legend
                 .enter()
                 .append('g')
                 .attr('class', 'legend-item')
+                .style('cursor', 'pointer')
                 .attr('transform', (d, i) => {
                     if (legendPosition === 'top') {
                         const col = i % legendItemsPerRow;
@@ -148,12 +246,41 @@ const StackedAreaChart = ({
                     } else {
                         return `translate(${width + 10},${i * legendItemHeight})`;
                     }
+                })
+                .on('click', (event, d) => {
+                    event.stopPropagation();
+                    // Debug logs
+                    console.log('Legend click event:', event);
+                    console.log('Legend clicked data:', d);
+                    console.log('Current groupKey:', groupKey);
+                    console.log('Current selectedBorough:', selectedBorough);
+                    
+                    // Only handle borough selection if groupKey is 'borough'
+                    if (onBoroughSelect && groupKey === 'borough') {
+                        // d is the borough name in the legend data
+                        const boroughName = d;
+                        console.log('Borough name from legend click:', boroughName);
+                        
+                        // Toggle selection
+                        if (selectedBorough && selectedBorough.toLowerCase() === boroughName.toLowerCase()) {
+                            onBoroughSelect(null);
+                        } else {
+                            onBoroughSelect(boroughName);
+                        }
+                    }
                 });
 
             legend.append('rect')
-                .attr('x', 0).attr('width', 19).attr('height', 19).attr('fill', color);
+                .attr('x', 0)
+                .attr('width', 19)
+                .attr('height', 19)
+                .attr('fill', d => typeof colorScale === 'function' ? colorScale(d) : colorScale[allGroups.indexOf(d) % colorScale.length]);
+
             legend.append('text')
-                .attr('x', 24).attr('y', 9.5).attr('dy', '0.32em').text(d => d);
+                .attr('x', 24)
+                .attr('y', 9.5)
+                .attr('dy', '0.32em')
+                .text(d => d);
         }
         
         const tooltip = d3.select("body").append("div")
@@ -175,12 +302,10 @@ const StackedAreaChart = ({
             .on("mouseover", () => { 
                 tooltip.style("visibility", "visible");
                 focusLine.style("opacity", 1);
-                paths.style("opacity", 0.5);
             })
             .on("mouseout", () => {
                 tooltip.style("visibility", "hidden");
                 focusLine.style("opacity", 0);
-                paths.style("opacity", 0.8);
             })
             .on("mousemove", function(event) {
                 const pointer = d3.pointer(event, this);
@@ -197,9 +322,9 @@ const StackedAreaChart = ({
                          .attr("x2", xScale(closestHour)).attr("y2", chartDrawingHeight);
 
                 let tooltipContent = `<strong>Hour: ${closestHour === 0 ? '12 AM' : (closestHour === 12 ? '12 PM' : (closestHour < 12 ? `${closestHour} AM` : `${closestHour - 12} PM`))}</strong><br/>`;
-                let totalForHour = 0;
                 const hoveredLayerData = [];
-
+                let totalForHour = 0;
+                
                 stackedData.forEach(layer => {
                     const dataPointIndex = bisectDate(layer, closestHour, 0, layer.length -1 );
                     const d0 = layer[dataPointIndex -1];
@@ -230,11 +355,9 @@ const StackedAreaChart = ({
                         hoveredCrime = item;
                     }
                 });
-                
-                paths.style('opacity', d => d.key === hoveredCrime?.crimeType ? 1 : 0.3);
 
                 if (hoveredCrime) {
-                    tooltipContent += `<span style="color:${color(hoveredCrime.crimeType)};">●</span> ${hoveredCrime.crimeType}: ${hoveredCrime.value.toFixed(0)}<br/>`;
+                    tooltipContent += `<span style="color:${typeof colorScale === 'function' ? colorScale(hoveredCrime.crimeType) : colorScale[allGroups.indexOf(hoveredCrime.crimeType) % colorScale.length]};">●</span> ${hoveredCrime.crimeType}: ${hoveredCrime.value.toFixed(0)}<br/>`;
                 }
                 tooltipContent += `Total Incidents: ${totalForHour.toFixed(0)}`;
 
@@ -245,10 +368,14 @@ const StackedAreaChart = ({
 
         return () => { tooltip.remove(); };
 
-    }, [data, margin, xKey, yKey, groupKey, colorScale, transitionDuration, showLegend, legendPosition, xAxisLabel, yAxisLabel]);
+    }, [data, selectedBorough]);
 
     return (
-        <svg ref={svgRef} style={{ width: '100%', height: '100%' }} />
+        <svg 
+            ref={svgRef} 
+            style={{ width: '100%', height: '100%' }}
+            className={selectedBorough ? 'filtered-view' : ''}
+        />
     );
 };
 

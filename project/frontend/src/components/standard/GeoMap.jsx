@@ -1,25 +1,36 @@
 import React, { useEffect, useState, useRef } from 'react';
 import * as d3 from 'd3';
 
-export default function GeoMap() {
+export default function GeoMap({ onBoroughSelect, selectedBorough }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedBorough, setSelectedBorough] = useState(null);
-  const [selectedNTA, setSelectedNTA] = useState(null);
   const containerRef = useRef(null);
 
   // Animation durations
   const TRANSITION_DURATION = 750;
   const HOVER_DURATION = 200;
 
-  // Color scale for boroughs
+  // Color scale for boroughs (uppercase for case-insensitive matching)
   const boroughColors = {
-    'Manhattan': '#1f77b4',
-    'Brooklyn': '#2ca02c',
-    'Queens': '#ff7f0e',
-    'Bronx': '#d62728',
-    'Staten Island': '#9467bd'
+    'MANHATTAN': '#1f77b4',
+    'BROOKLYN': '#2ca02c',
+    'QUEENS': '#ff7f0e',
+    'BRONX': '#d62728',
+    'STATEN ISLAND': '#9467bd'
+  };
+
+  // Case-insensitive borough color getter
+  const getBoroughColor = (borough) => {
+    if (!borough) return '#ccc';
+    const upperBorough = borough.toUpperCase();
+    return boroughColors[upperBorough] || '#ccc';
+  };
+
+  // Case-insensitive borough comparison
+  const isSameBorough = (borough1, borough2) => {
+    if (!borough1 || !borough2) return false;
+    return borough1.toUpperCase() === borough2.toUpperCase();
   };
 
   // Handle resize
@@ -150,15 +161,15 @@ export default function GeoMap() {
       .attr("fill", d => {
         const borough = d.properties.BoroName;
         // Highlight selected borough
-        if (selectedBorough === borough) {
-          return d3.color(boroughColors[borough]).brighter(0.3);
+        if (isSameBorough(selectedBorough, borough)) {
+          return d3.color(getBoroughColor(borough)).brighter(0.3);
         }
-        return boroughColors[borough] || '#ccc';
+        return getBoroughColor(borough);
       })
       .attr("stroke", "white")
       .attr("stroke-width", d => {
         const borough = d.properties.BoroName;
-        return selectedBorough === borough ? 2 : 1;
+        return isSameBorough(selectedBorough, borough) ? 2 : 1;
       })
       .style("cursor", "pointer");  // Add pointer cursor
 
@@ -173,12 +184,12 @@ export default function GeoMap() {
         const borough = d.properties.BoroName;
         const ntaName = d.properties.NTAName;
         
-        if (borough !== selectedBorough) {  // Only highlight if not selected
+        if (!isSameBorough(borough, selectedBorough)) {  // Only highlight if not selected
           d3.select(this)
             .transition()
             .duration(50)
             .attr("stroke-width", 2)
-            .attr("fill", d3.color(boroughColors[borough]).brighter(0.5));
+            .attr("fill", d3.color(getBoroughColor(borough)).brighter(0.5));
         }
         
         tooltip
@@ -186,7 +197,7 @@ export default function GeoMap() {
           .html(`
             <strong>${ntaName}</strong><br/>
             Borough: ${borough}
-            ${selectedBorough === borough ? '<br/><em>(Selected)</em>' : ''}
+            ${isSameBorough(selectedBorough, borough) ? '<br/><em>(Selected)</em>' : ''}
           `)
           .style("left", (event.pageX + 10) + "px")
           .style("top", (event.pageY - 10) + "px");
@@ -199,37 +210,34 @@ export default function GeoMap() {
       .on("mouseout", function(event, d) {
         const borough = d.properties.BoroName;
         
-        if (borough !== selectedBorough) {  // Only restore if not selected
+        if (!isSameBorough(borough, selectedBorough)) {  // Only restore if not selected
           d3.select(this)
             .transition()
             .duration(50)
             .attr("stroke-width", 1)
-            .attr("fill", boroughColors[borough] || '#ccc');
+            .attr("fill", getBoroughColor(borough));
         }
         
         tooltip.style("visibility", "hidden");
       })
       .on("click", function(event, d) {
         const borough = d.properties.BoroName;
-        const ntaName = d.properties.NTAName;
         
-        // Toggle selection
-        if (selectedBorough === borough) {
-          setSelectedBorough(null);
-          setSelectedNTA(null);
+        // Toggle selection using the prop function
+        if (isSameBorough(selectedBorough, borough)) {
+          onBoroughSelect(null);
         } else {
-          setSelectedBorough(borough);
-          setSelectedNTA(ntaName);
+          onBoroughSelect(borough);
         }
       });
 
     // Update all regions when selection changes
     regions.each(function(d) {
       const borough = d.properties.BoroName;
-      if (borough === selectedBorough) {
+      if (isSameBorough(borough, selectedBorough)) {
         d3.select(this)
           .attr("stroke-width", 2)
-          .attr("fill", d3.color(boroughColors[borough]).brighter(0.3));
+          .attr("fill", d3.color(getBoroughColor(borough)).brighter(0.3));
       }
     });
 
@@ -327,11 +335,10 @@ export default function GeoMap() {
           className="absolute top-4 right-4 bg-white p-2 rounded shadow"
           style={{ zIndex: 1000 }}
         >
-          Selected: {selectedNTA} ({selectedBorough})
+          Selected: {selectedBorough}
           <button 
             onClick={() => {
-              setSelectedBorough(null);
-              setSelectedNTA(null);
+              onBoroughSelect(null);
             }}
             className="ml-2 px-2 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
           >

@@ -7,7 +7,9 @@ const SunburstChart = ({
     height = 600,
     margin = { top: 10, right: 10, bottom: 10, left: 10 },
     maxDepth = 2, // Represents the number of rings to show in any view
-    transitionDuration = 750
+    transitionDuration = 750,
+    selectedBorough = null,  // Add selectedBorough prop
+    onBoroughSelect = null  // Add onBoroughSelect prop
 }) => {
     const svgRef = useRef();
 
@@ -66,6 +68,21 @@ const SunburstChart = ({
             if (!d.id) d.id = d.originalX0 + "-" + d.originalY0 + "-" + (d.data.name || 'node');
         });
 
+        // Function to find a node by borough name
+        const findBoroughNode = (node, boroughName) => {
+            if (!node || !boroughName) return null;
+            if (node.depth === 1 && node.data.name.toLowerCase() === boroughName.toLowerCase()) {
+                return node;
+            }
+            if (node.children) {
+                for (let child of node.children) {
+                    const found = findBoroughNode(child, boroughName);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+
         const getArcFill = d => {
             if (d.depth === 3) return colorScale(d.data.rating);
             if (d.depth === 2) {
@@ -121,10 +138,22 @@ const SunburstChart = ({
             let newP;
             if (clickedArcOrRoot === root) {
                 newP = root;
+                // Notify parent component when zooming out to root
+                if (onBoroughSelect && currentZoomTarget !== root) {
+                    onBoroughSelect(null);
+                }
             } else if (clickedArcOrRoot === currentZoomTarget && clickedArcOrRoot.parent) {
                 newP = clickedArcOrRoot.parent;
+                // Notify parent component when zooming out
+                if (onBoroughSelect && clickedArcOrRoot.depth === 1) {
+                    onBoroughSelect(null);
+                }
             } else {
                 newP = clickedArcOrRoot;
+                // Notify parent component when clicking on a borough
+                if (onBoroughSelect && clickedArcOrRoot.depth === 1) {
+                    onBoroughSelect(clickedArcOrRoot.data.name);
+                }
             }
             
             if (currentZoomTarget === newP && newP === root && clickedArcOrRoot === root && _event && _event.type === 'click') {
@@ -133,14 +162,21 @@ const SunburstChart = ({
                 return; // No change if target is already the current one
             }
 
+            // Store the previous target for transition calculation
+            const previousTarget = currentZoomTarget;
             currentZoomTarget = newP;
             updateCenterText();
+
+            // Calculate the transition duration based on depth change
+            const depthChange = Math.abs((previousTarget?.depth || 0) - (currentZoomTarget?.depth || 0));
+            const transitionTime = transitionDuration * (depthChange || 1);
 
             root.each(d => {
                 let targetX0, targetX1, targetY0, targetY1;
                 const p = currentZoomTarget;
 
                 if (p === root) {
+                    // When zooming out to root, use original coordinates
                     targetX0 = d.originalX0;
                     targetX1 = d.originalX1;
                     targetY0 = d.originalY0;
@@ -176,15 +212,24 @@ const SunburstChart = ({
                         }
                     }
                 }
+
+                // Store the starting position for the transition
+                d.current = d.current || { x0: d.originalX0, x1: d.originalX1, y0: d.originalY0, y1: d.originalY1 };
                 d.target = { x0: targetX0, x1: targetX1, y0: targetY0, y1: targetY1 };
             });
 
-            const t = svg.transition().duration(transitionDuration);
+            const t = svg.transition()
+                .duration(transitionTime)
+                .ease(d3.easeCubicInOut); // Add easing for smoother transition
 
+            // Update paths with transition
             path.transition(t)
                 .tween("data", dNode => {
                     const i = d3.interpolate(dNode.current, dNode.target);
-                    return time => dNode.current = i(time);
+                    return time => {
+                        dNode.current = i(time);
+                        return dNode.current;
+                    };
                 })
                 .attr("fill-opacity", dNode => {
                     const p = currentZoomTarget;
@@ -204,6 +249,7 @@ const SunburstChart = ({
                 })
                 .attrTween("d", dNode => () => arc(dNode.current) || "M0,0");
 
+            // Update labels with transition
             label.transition(t)
                 .attr("fill-opacity", dNode => {
                     const p = currentZoomTarget;
@@ -215,6 +261,13 @@ const SunburstChart = ({
                 })
                 .attr("pointer-events", "none")
                 .attrTween("transform", dNode => () => labelTransform(dNode.current));
+
+            // Fade center text
+            centerText.transition(t)
+                .style("opacity", 0)
+                .transition()
+                .duration(transitionTime / 2)
+                .style("opacity", 1);
         }
         
         // Bind all descendants that have depth > 0
@@ -326,12 +379,20 @@ const SunburstChart = ({
             .style('font-size', '14px') 
             .style('font-weight', 'bold')
             .text('NYC Restaurant Ratings');
+
+        // Handle initial borough selection if any
+        if (selectedBorough) {
+            const targetNode = findBoroughNode(root, selectedBorough);
+            if (targetNode) {
+                clicked(null, targetNode);
+            }
+        }
         
         return () => {
             tooltipDiv.remove();
             // Any other cleanup, e.g. d3.select(svgRef.current).selectAll('*').remove(); if not handled by effect re-run
         };
-    }, [data, width, height, margin, maxDepth, transitionDuration]); // Ensure all props used in effect are listed
+    }, [data, width, height, margin, maxDepth, transitionDuration, selectedBorough, onBoroughSelect]); // Add selectedBorough and onBoroughSelect to dependencies
 
     return (
         <div className="sunburst-container" style={{ position: 'relative', width: '100%', height: '100%' }}>
