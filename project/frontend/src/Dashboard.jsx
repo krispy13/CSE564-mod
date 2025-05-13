@@ -17,11 +17,11 @@ import {
 
 // Borough color mapping for consistent visualization with softer colors on dark background
 const boroughColors = {
-    'MANHATTAN': '#7AA2F7', // Soft blue from reference
+    'MANHATTAN': '#7AA2F7', // Soft blue
     'BROOKLYN': '#F27649', // Warm orange
-    'QUEENS': '#BB9AF7', // Soft purple from reference
-    'BRONX': '#F7768E', // Soft pink from reference
-    'STATEN ISLAND': '#73DACA' // Cyan from reference
+    'QUEENS': '#BB9AF7', // Soft purple
+    'BRONX': '#F7768E', // Soft pink
+    'STATEN ISLAND': '#73DACA' // Cyan
 };
 
 // Case-insensitive borough color getter
@@ -150,29 +150,32 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="h-screen bg-[#1a1b26] p-4 font-montserrat flex flex-col overflow-hidden">
-            {/* Simple Header */}
-            <header className="mb-2 flex-shrink-0">
-                <h1 className="text-xl font-dm-sans font-semibold text-[#a9b1d6]">Data Visualization Dashboard</h1>
+        <div className="h-screen bg-[#1a1b26] flex flex-col">
+            {/* Minimal header */}
+            <header className="p-2 h-12">
+                <h1 className="text-xl font-semibold text-[#a9b1d6]">Data Visualization Dashboard</h1>
             </header>
 
-            {/* Main Content - Chart Grid */}
-            <main className="flex-1 grid grid-cols-3 grid-rows-2 gap-3 min-h-0">
-                {/* Chart 1 - NYC Neighborhoods Map */}
-                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-dm-sans font-medium text-[#ffffff] mb-1 flex-shrink-0">NYC Neighborhoods</h3>
-                    <div className="flex-1 min-h-0">
-                        <GeoMap onBoroughSelect={setSelectedBorough} selectedBorough={selectedBorough} />
+            {/* Main grid with fixed height calculations */}
+            <main className="grid grid-cols-3 grid-rows-2 gap-2 p-2 h-[calc(100vh-6rem)]">
+                {/* Each chart container needs to be sized relative to its space */}
+                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
+                    <h3 className="text-sm font-medium text-[#ffffff] mb-1">NYC Neighborhoods</h3>
+                    <div className="flex-1 w-full h-[calc(100%-2rem)]">
+                        <GeoMap 
+                            onBoroughSelect={setSelectedBorough} 
+                            selectedBorough={selectedBorough}
+                            colorScale={boroughColors}
+                        />
                     </div>
                 </div>
 
-                {/* Chart 2 - Restaurant Sunburst Chart */}
-                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-dm-sans font-medium text-[#ffffff] mb-2">NYC Restaurant Ratings</h3>
-                    <div className="flex-1 min-h-0 flex items-center justify-center">
+                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
+                    <h3 className="text-sm font-medium text-[#ffffff] mb-1">NYC Restaurant Ratings</h3>
+                    <div className="flex-1 w-full h-[calc(100%-2rem)]">
                         {loadingRestaurants ? (
                             <div className="flex items-center justify-center h-full">
-                                <p className="text-[#787c99] font-montserrat">Loading restaurant data...</p>
+                                <p className="text-[#787c99]">Loading restaurant data...</p>
                             </div>
                         ) : (
                             <SunburstChart
@@ -182,22 +185,20 @@ export default function Dashboard() {
                                 transitionDuration={600}
                                 selectedBorough={selectedBorough}
                                 onBoroughSelect={setSelectedBorough}
+                                colorScale={getBoroughColor}
                             />
                         )}
                     </div>
                 </div>
 
-                {/* Chart 3 - Parallel Coordinates Plot */}
-                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-dm-sans font-medium text-[#ffffff] mb-1 flex-shrink-0">
+                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
+                    <h3 className="text-sm font-medium text-[#ffffff] mb-1">
                         Airbnb Listing Characteristics
                         {selectedBorough && (
-                            <span className="ml-2 text-[#7aa2f7] font-montserrat">
-                                (Filtered: {selectedBorough})
-                            </span>
+                            <span className="ml-2 text-[#7aa2f7]">(Filtered: {selectedBorough})</span>
                         )}
                     </h3>
-                    <div className="flex-1 min-h-0">
+                    <div className="flex-1 w-full h-[calc(100%-2rem)]">
                         <PCP
                             data={getFilteredPCPData()}
                             dimensions={pcpDimensions}
@@ -208,25 +209,22 @@ export default function Dashboard() {
                             lineOpacity={0.3}
                             showCentroids={true}
                             onCategorySelect={handlePCPBoroughSelect}
-                            colorScale={(borough) => getBoroughColor(borough)}
+                            colorScale={getBoroughColor}
                         />
                     </div>
                 </div>
 
-                {/* Chart 4 - Stacked Area Chart by Borough */}
-                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-dm-sans font-medium text-[#ffffff] mb-1 flex-shrink-0">
+                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
+                    <h3 className="text-sm font-medium text-[#ffffff] mb-1">
                         NYC Crime Trends by Borough
                         {selectedBorough && (
-                            <span className="ml-2 text-[#7aa2f7] font-montserrat">
-                                (Filtered: {selectedBorough})
-                            </span>
+                            <span className="ml-2 text-[#7aa2f7]">(Filtered: {selectedBorough})</span>
                         )}
                     </h3>
-                    <div className="flex-1 min-h-0">
+                    <div className="flex-1 w-full h-[calc(100%-2rem)]">
                         {loading ? (
                             <div className="flex items-center justify-center h-full">
-                                <p className="text-[#787c99] font-montserrat">Loading crime data...</p>
+                                <p className="text-[#787c99]">Loading crime data...</p>
                             </div>
                         ) : (
                             <StackedAreaChart
@@ -235,7 +233,7 @@ export default function Dashboard() {
                                 xKey="hour_of_day"
                                 yKey="incident_count"
                                 groupKey="borough"
-                                colorScale={d => getBoroughColor(d)}
+                                colorScale={getBoroughColor}
                                 showLegend={true}
                                 legendPosition="top"
                                 xAxisLabel="Hour of Day"
@@ -247,17 +245,14 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Chart 5 - Line Bar Chart */}
-                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col overflow-hidden">
-                    <h3 className="text-sm font-dm-sans font-medium text-[#ffffff] mb-1 flex-shrink-0">
+                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
+                    <h3 className="text-sm font-medium text-[#ffffff] mb-1">
                         Environmental Metrics
                         {selectedBorough && (
-                            <span className="ml-2 text-[#7aa2f7] font-montserrat">
-                                (Filtered: {selectedBorough})
-                            </span>
+                            <span className="ml-2 text-[#7aa2f7]">(Filtered: {selectedBorough})</span>
                         )}
                     </h3>
-                    <div className="flex-1 min-h-0">
+                    <div className="flex-1 w-full h-[calc(100%-2rem)]">
                         <LineBarChart
                             data={getLineDataForBorough(selectedBorough).map(d => ({
                                 label: d.label,
@@ -266,52 +261,53 @@ export default function Dashboard() {
                             }))}
                             selectedBorough={selectedBorough}
                             onBoroughSelect={setSelectedBorough}
-                            barColor="#2F334D"
-                            lineColor="#7aa2f7"
+                            barColor={selectedBorough ? getBoroughColor(selectedBorough) : "#2F334D"}
+                            lineColor={selectedBorough ? getBoroughColor(selectedBorough) : "#7aa2f7"}
                             hoverColor="#F27649"
                         />
                     </div>
                 </div>
 
-                {/* Chart 6 - Welcome Text Box */}
-                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-4 flex flex-col">
-                    <h3 className="text-lg font-dm-sans font-medium text-[#ffffff] mb-2">Welcome to NYC Explorer!</h3>
-                    <div className="flex-1 text-[#787c99] text-sm font-montserrat">
-                        <p className="mb-3">
+                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
+                    <h3 className="text-lg font-medium text-[#ffffff] mb-2">Welcome to NYC Explorer!</h3>
+                    <div className="flex-1">
+                        <p className="mb-3 text-[#787c99]">
                             Discover NYC neighborhoods through our interactive visualizations:
                         </p>
-                        <ul className="space-y-1.5">
+                        <ul className="space-y-1.5 text-[#787c99]">
                             <li className="flex items-start">
                                 <span className="text-[#7aa2f7] mr-2">•</span>
-                                <span><span className="font-dm-sans font-medium text-[#ffffff]">Interactive Map:</span> Click boroughs to explore local data</span>
+                                <span><span className="font-medium text-[#ffffff]">Interactive Map:</span> Click boroughs to explore local data</span>
                             </li>
                             <li className="flex items-start">
                                 <span className="text-[#7aa2f7] mr-2">•</span>
-                                <span><span className="font-dm-sans font-medium text-[#ffffff]">Dining:</span> Find top-rated restaurants by cuisine</span>
+                                <span><span className="font-medium text-[#ffffff]">Dining:</span> Find top-rated restaurants by cuisine</span>
                             </li>
                             <li className="flex items-start">
                                 <span className="text-[#7aa2f7] mr-2">•</span>
-                                <span><span className="font-dm-sans font-medium text-[#ffffff]">Stays:</span> Compare Airbnb prices and reviews</span>
+                                <span><span className="font-medium text-[#ffffff]">Stays:</span> Compare Airbnb prices and reviews</span>
                             </li>
                             <li className="flex items-start">
                                 <span className="text-[#7aa2f7] mr-2">•</span>
-                                <span><span className="font-dm-sans font-medium text-[#ffffff]">Safety:</span> View crime patterns by time and area</span>
+                                <span><span className="font-medium text-[#ffffff]">Safety:</span> View crime patterns by time and area</span>
                             </li>
                             <li className="flex items-start">
                                 <span className="text-[#7aa2f7] mr-2">•</span>
-                                <span><span className="font-dm-sans font-medium text-[#ffffff]">Environment:</span> Check area comfort metrics</span>
+                                <span><span className="font-medium text-[#ffffff]">Environment:</span> Check area comfort metrics</span>
                             </li>
                         </ul>
-                        <p className="mt-3 text-sm text-[#7aa2f7] font-dm-sans font-medium">
+                        <p className="mt-3 text-sm text-[#7aa2f7] font-medium">
                             💡 Tip: Click any borough to focus all charts on that area!
                         </p>
                     </div>
                 </div>
             </main>
 
-            {/* Simple Footer */}
-            <footer className="mt-2 text-[#565f89] text-xs font-montserrat flex-shrink-0">
-                <p>Last updated: April 5, 2025</p>
+            {/* Minimal footer */}
+            <footer className="p-2 h-12">
+                <p className="text-center text-[#565f89] text-xs">
+                    &copy; {new Date().getFullYear()} NYC Explorer. All rights reserved.
+                </p>
             </footer>
         </div>
     );

@@ -89,7 +89,7 @@ const SunburstChart = ({
         
         const tooltipDiv = d3.select('body')
             .append('div')
-            .attr('class', 'sunburst-tooltip font-montserrat')
+            .attr('class', 'sunburst-tooltip')
             .style('position', 'absolute')
             .style('visibility', 'hidden')
             .style('background-color', '#2f334d') // Dark tooltip background
@@ -98,7 +98,7 @@ const SunburstChart = ({
             .style('padding', '8px')
             .style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)')
             .style('font-size', '12px')
-            .style('font-family', 'var(--font-montserrat)') // Montserrat for tooltip
+            .style('font-family', 'system-ui, -apple-system, sans-serif') // System font for tooltip
             .style('color', '#ffffff') // Bright white text
             .style('pointer-events', 'none');
         
@@ -183,7 +183,7 @@ const SunburstChart = ({
             .attr('fill', '#ffffff') // Bright white text
             .style('font-size', '10px') // Slightly larger
             .style('font-weight', '500') // Medium weight for better visibility
-            .style('font-family', 'var(--font-montserrat)') // Montserrat for center text
+            .style('font-family', 'system-ui, -apple-system, sans-serif') // System font for center text
             .style('pointer-events', 'none');
 
         function updateCenterText() {
@@ -402,7 +402,7 @@ const SunburstChart = ({
                 if (dNode.depth === 2) return '10px';
                 return '9px';
             })
-            .style('font-family', 'var(--font-montserrat)') // Montserrat for labels
+            .style('font-family', 'system-ui, -apple-system, sans-serif') // System font for labels
             .attr('fill', '#ffffff') // Bright white text for maximum contrast
             .text(dNode => dNode.data.name)
             .each(function(dNode) {
@@ -458,7 +458,7 @@ const SunburstChart = ({
             .attr('class', 'visualization-title')
             .style('font-size', '16px') // Larger title
             .style('font-weight', '600') // Semi-bold
-            .style('font-family', 'var(--font-dm-sans)') // DM Sans for title
+            .style('font-family', 'system-ui, -apple-system, sans-serif') // System font for title
             .style('fill', '#ffffff') // Bright white text
             .text('NYC Restaurant Ratings');
 

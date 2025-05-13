@@ -228,40 +228,25 @@ const StackedAreaChart = ({
             .style('text-anchor', 'end')
             .attr('dx', '-.8em').attr('dy', '.15em').attr('transform', 'rotate(-45)');
 
-        // Update y-axis with proper formatting and spacing
-        const yAxis = d3.axisLeft(yScale)
-            .ticks(8)
-            .tickFormat(d3.format(',d'));
+        svg.append('g').call(d3.axisLeft(yScale));
 
-        svg.append('g')
-            .call(yAxis)
-            .selectAll('text')
-            .style('font-size', '11px')
-            .attr('dx', '-0.5em');
-
-        // Update axis text colors
-        svg.selectAll('.tick text')
-            .style('fill', '#787c99'); // Muted text color
-
-        // Update x-axis label color
         if (xAxisLabel) {
             svg.append('text')
                 .attr('transform', `translate(${width/2}, ${chartDrawingHeight + margin.bottom - 10})`)
                 .style('text-anchor', 'middle')
                 .style('font-size', '12px')
-                .style('fill', '#a9b1d6') // Softer text color
                 .text(xAxisLabel);
         }
 
-        // Update y-axis label color
-        svg.append('text')
-            .attr('transform', 'rotate(-90)')
-            .attr('y', -margin.left + 20)
-            .attr('x', -(chartDrawingHeight / 2))
-            .style('text-anchor', 'middle')
-            .style('font-size', '12px')
-            .style('fill', '#a9b1d6') // Softer text color
-            .text(yAxisLabel);
+        if (yAxisLabel) {
+            svg.append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('y', -margin.left + 20)
+                .attr('x', -(chartDrawingHeight / 2))
+                .style('text-anchor', 'middle')
+                .style('font-size', '12px')
+                .text(yAxisLabel);
+        }
 
         if (showLegend) {
             const legendGroup = d3.select(svgRef.current).select("g")
@@ -303,21 +288,15 @@ const StackedAreaChart = ({
                 .attr('x', 16)
                 .attr('y', 9)
                 .style('font-size', '10px')
-                .style('fill', '#a9b1d6') // Softer text color
                 .text(d => d);
         }
         
         const tooltip = d3.select("body").append("div")
             .attr("class", "stacked-area-tooltip")
-            .style("position", "absolute")
-            .style("visibility", "hidden")
-            .style("background-color", "#24283b") // Dark background
-            .style("border", "1px solid #2f334d") // Dark border
-            .style("border-width", "1px")
-            .style("border-radius", "5px")
-            .style("padding", "10px")
-            .style("font-size", "12px")
-            .style("color", "#a9b1d6") // Softer text color
+            .style("position", "absolute").style("visibility", "hidden")
+            .style("background-color", "white").style("border", "solid")
+            .style("border-width", "1px").style("border-radius", "5px")
+            .style("padding", "10px").style("font-size", "12px")
             .style("pointer-events", "none");
 
         const bisectDate = d3.bisector(d => d.data[0]).left;

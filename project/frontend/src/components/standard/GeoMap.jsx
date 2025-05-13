@@ -13,19 +13,19 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
   const HOVER_DURATION = 200;
 
   // Borough color mapping for consistent visualization with softer colors on dark background
-  const BOROUGH_COLORS = {
-    'MANHATTAN': '#7AA2F7', // Soft blue from reference
-    'BROOKLYN': '#F27649', // Warm yellow
-    'QUEENS': '#BB9AF7', // Soft purple from reference
-    'BRONX': '#F7768E', // Soft pink from reference
-    'STATEN ISLAND': '#73DACA' // Cyan from reference
+  const boroughColors = {
+    'MANHATTAN': '#7AA2F7', // Soft blue
+    'BROOKLYN': '#F27649', // Warm orange
+    'QUEENS': '#BB9AF7', // Soft purple
+    'BRONX': '#F7768E', // Soft pink
+    'STATEN ISLAND': '#73DACA' // Cyan
   };
 
   // Case-insensitive borough color getter
   const getBoroughColor = (borough) => {
-    if (!borough) return '#FF7B5C'; // Warm orange when no borough selected
+    if (!borough) return '#2f334d'; // Darker gray for unselected
     const upperBorough = borough.toUpperCase();
-    return BOROUGH_COLORS[upperBorough] || '#FF7B5C';
+    return boroughColors[upperBorough] || '#2f334d';
   };
 
   // Case-insensitive borough comparison
@@ -320,7 +320,7 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
     // Add white background to legend
     legendGroup.append("rect")
       .attr("width", 120)
-      .attr("height", Object.keys(BOROUGH_COLORS).length * 20 + legendPadding * 2)
+      .attr("height", Object.keys(boroughColors).length * 20 + legendPadding * 2)
       .attr("fill", "#24283b") // Dark background for legend
       .attr("opacity", 0.9)
       .attr("rx", 5)
@@ -331,7 +331,7 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
     const legend = legendGroup.append("g")
       .attr("transform", `translate(${legendPadding}, ${legendPadding})`);
 
-    Object.entries(BOROUGH_COLORS).forEach(([borough, color], i) => {
+    Object.entries(boroughColors).forEach(([borough, color], i) => {
       const legendRow = legend.append("g")
         .attr("transform", `translate(0, ${i * 20})`)
         .style("opacity", isInitialRender ? 0 : 1);

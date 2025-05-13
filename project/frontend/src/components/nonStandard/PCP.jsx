@@ -117,36 +117,23 @@ export default function PCP({
             return rawValue;
         };
 
-        // Borough color mapping for consistent visualization with softer colors on dark background
-        const BOROUGH_COLORS = {
-            'MANHATTAN': '#7AA2F7', // Soft blue from reference
-            'BROOKLYN': '#E0AF68', // Warm yellow
-            'QUEENS': '#BB9AF7', // Soft purple from reference
-            'BRONX': '#F7768E', // Soft pink from reference
-            'STATEN ISLAND': '#73DACA' // Cyan from reference
-        };
-
+        let getColor;
         const categories = [...new Set(data.map(d => d[categoryAttribute]).filter(cat => cat !== undefined && cat !== null))].sort((a,b) => d3.ascending(a,b));
+        if (colorByCategory) {
+            getColor = colorScale || ((category) => {
+                // Fallback to d3 category colors if no colorScale provided
+                return d3.schemeCategory10[categories.length === 0 ? 0 : categories.indexOf(category) % 10];
+            });
+        }
 
-        const getColor = colorScale || ((category) => {
-            // Use our borough colors if the category is a borough
-            if (category && BOROUGH_COLORS[category.toUpperCase()]) {
-                return BOROUGH_COLORS[category.toUpperCase()];
-            }
-            // Default to warm orange if not a borough
-            return '#FF7B5C';
-        });
-
-        const tooltip = d3.select("body")
-            .append("div")
+        const tooltip = d3.select("body").append("div")
             .attr("class", "tooltip")
             .style("position", "absolute")
-            .style("background-color", "#24283b")
-            .style("border", "1px solid #2f334d")
+            .style("background", "white")
+            .style("border", "1px solid #ddd")
             .style("border-radius", "4px")
             .style("padding", "8px")
             .style("font-size", "12px")
-            .style("color", "#a9b1d6")
             .style("pointer-events", "none")
             .style("opacity", 0)
             .style("z-index", "1000")
@@ -164,16 +151,12 @@ export default function PCP({
                     g.selectAll(".tick line").attr("stroke-opacity", 0.5);
                 });
 
-            // Update axis text colors
-            svg.selectAll(".tick text")
-                .style("fill", "#787c99");
-
-            // Add axis label at the bottom with updated color
+            // Add axis label at the bottom
             svg.append("text")
                 .attr("x", x(dimension.name))
                 .attr("y", innerHeight + 30)
                 .attr("text-anchor", "middle")
-                .style("fill", "#a9b1d6")
+                .attr("fill", "#000")
                 .style("font-size", "11px")
                 .text(dimension.label || dimension.name);
         });
@@ -185,7 +168,6 @@ export default function PCP({
                 .attr("text-anchor", "middle")
                 .style("font-size", "16px")
                 .style("font-weight", "bold")
-                .style("fill", "#a9b1d6")
                 .text(title);
         }
 
@@ -231,13 +213,8 @@ export default function PCP({
                     .attr("y", 4)
                     .style("font-size", "10px")
                     .style("font-weight", "500")
-                    .style("fill", "#a9b1d6")
                     .text(category);
             });
-
-            // Update legend text colors
-            legend.selectAll("text")
-                .style("fill", "#a9b1d6");
         }
 
         const lineGenerator = d3.line()

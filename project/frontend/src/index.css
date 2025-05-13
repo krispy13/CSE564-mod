@@ -1,72 +1,38 @@
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Ensure fonts are properly loaded */
-:root {
-  --font-montserrat: 'Montserrat', system-ui, -apple-system, sans-serif;
-  --font-dm-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+body {
+  @apply bg-[#1a1b26];
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
-@layer base {
-  html {
-    font-family: var(--font-montserrat);
-  }
-  
-  body {
-    @apply font-montserrat;
-    font-family: var(--font-montserrat);
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-dm-sans;
-    font-family: var(--font-dm-sans) !important;
-  }
-}
-
-/* Ensure D3 visualizations use the correct fonts */
+/* Visualization styles */
 .visualization-title {
-  @apply font-dm-sans;
-  font-family: var(--font-dm-sans) !important;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
 .visualization-text {
-  @apply font-montserrat;
-  font-family: var(--font-montserrat) !important;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
-/* Additional D3 visualization text styles */
+/* Text styles */
 .axis-label {
-  @apply font-montserrat text-sm;
-  font-family: var(--font-montserrat) !important;
+  @apply text-sm;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
 .legend-text {
-  @apply font-montserrat text-xs;
-  font-family: var(--font-montserrat) !important;
+  @apply text-xs;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
-.tooltip {
-  @apply font-montserrat text-sm;
-  font-family: var(--font-montserrat) !important;
-}
-
-/* Force DM Sans for specific elements */
-.font-dm-sans,
+/* General text styles */
 h1, h2, h3, h4, h5, h6,
-.heading {
-  font-family: var(--font-dm-sans) !important;
-}
-
-/* Force Montserrat for specific elements */
-.font-montserrat,
+.heading,
 .body-text,
 p,
-span:not(.heading),
-div:not(.heading) {
-  font-family: var(--font-montserrat) !important;
+span,
+div {
+  font-family: system-ui, -apple-system, sans-serif;
 }

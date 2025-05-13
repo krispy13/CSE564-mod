@@ -5,50 +5,14 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- Preload fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    <!-- Preload critical font files -->
-    <link
-      rel="preload"
-      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap"
-      as="style"
-    />
-    <link
-      rel="preload"
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap"
-      as="style"
-    />
-    
-    <!-- Load fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
     <style>
-      /* Critical font loading */
-      @font-face {
-        font-family: 'Montserrat';
-        font-style: normal;
-        font-weight: 400;
-        font-display: swap;
-        src: url(https://fonts.gstatic.com/s/montserrat/v25/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCtr6Hw5aXo.woff2) format('woff2');
-      }
-      
-      /* Ensure fonts are applied immediately */
-      :root {
-        --font-montserrat: 'Montserrat', system-ui, -apple-system, sans-serif;
-        --font-dm-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
-      }
-      
       body {
-        font-family: var(--font-montserrat);
+        font-family: system-ui, -apple-system, sans-serif;
       }
       
       h1, h2, h3, h4, h5, h6,
-      .font-dm-sans,
       .heading {
-        font-family: var(--font-dm-sans) !important;
+        font-family: system-ui, -apple-system, sans-serif;
       }
     </style>
     
