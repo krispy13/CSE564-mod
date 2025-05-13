@@ -43,6 +43,7 @@ const StackedAreaChart = ({
                 .attr('x', svgRef.current.clientWidth / 2)
                 .attr('y', svgRef.current.clientHeight / 2)
                 .attr('text-anchor', 'middle')
+                .style('fill', '#a9b1d6')
                 .text(`No data available${selectedBorough ? ` for ${selectedBorough}` : ''}`);
             return;
         }
@@ -214,39 +215,61 @@ const StackedAreaChart = ({
                 }
             });
 
-        const xAxis = d3.axisBottom(xScale)
-            .ticks(Math.min(24, (xScale.domain()[1] - xScale.domain()[0] || 0) +1 )) 
-            .tickFormat(d => {
-                if (d === 0) return '12 AM'; if (d === 12) return '12 PM';
-                return d < 12 ? `${d} AM` : `${d - 12} PM`;
+        // Add axes with consistent text color
+        svg.append('g')
+            .attr('transform', `translate(0,${chartDrawingHeight})`)
+            .call(d3.axisBottom(xScale)
+                .ticks(width > 600 ? 24 : 12)
+                .tickFormat(d => d))
+            .call(g => {
+                g.selectAll('text')
+                    .style('fill', '#a9b1d6')
+                    .style('font-size', '12px');
+                g.selectAll('line')
+                    .style('stroke', '#2f334d');
+                g.select('.domain')
+                    .style('stroke', '#2f334d');
             });
 
         svg.append('g')
-            .attr('transform', `translate(0,${chartDrawingHeight})`)
-            .call(xAxis)
-            .selectAll('text')
-            .style('text-anchor', 'end')
-            .attr('dx', '-.8em').attr('dy', '.15em').attr('transform', 'rotate(-45)');
-
-        svg.append('g').call(d3.axisLeft(yScale));
+            .call(d3.axisLeft(yScale))
+            .call(g => {
+                g.selectAll('text')
+                    .style('fill', '#a9b1d6')
+                    .style('font-size', '12px');
+                g.selectAll('line')
+                    .style('stroke', '#2f334d');
+                g.select('.domain')
+                    .style('stroke', '#2f334d');
+            });
 
         if (xAxisLabel) {
             svg.append('text')
-                .attr('transform', `translate(${width/2}, ${chartDrawingHeight + margin.bottom - 10})`)
-                .style('text-anchor', 'middle')
-                .style('font-size', '12px')
+                .attr('x', width / 2)
+                .attr('y', chartDrawingHeight + 40)
+                .attr('text-anchor', 'middle')
+                .style('fill', '#a9b1d6')
                 .text(xAxisLabel);
         }
 
         if (yAxisLabel) {
             svg.append('text')
                 .attr('transform', 'rotate(-90)')
-                .attr('y', -margin.left + 20)
-                .attr('x', -(chartDrawingHeight / 2))
-                .style('text-anchor', 'middle')
-                .style('font-size', '12px')
+                .attr('x', -chartDrawingHeight / 2)
+                .attr('y', -40)
+                .attr('text-anchor', 'middle')
+                .style('fill', '#a9b1d6')
                 .text(yAxisLabel);
         }
+
+        svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', -20)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '16px')
+            .style('font-weight', 'bold')
+            .style('fill', '#a9b1d6')
+            .text(selectedBorough ? `${selectedBorough} Crime Distribution` : 'NYC Crime Distribution by Time');
 
         if (showLegend) {
             const legendGroup = d3.select(svgRef.current).select("g")
@@ -288,16 +311,22 @@ const StackedAreaChart = ({
                 .attr('x', 16)
                 .attr('y', 9)
                 .style('font-size', '10px')
+                .style('fill', '#a9b1d6')
                 .text(d => d);
         }
         
         const tooltip = d3.select("body").append("div")
             .attr("class", "stacked-area-tooltip")
-            .style("position", "absolute").style("visibility", "hidden")
-            .style("background-color", "white").style("border", "solid")
-            .style("border-width", "1px").style("border-radius", "5px")
-            .style("padding", "10px").style("font-size", "12px")
-            .style("pointer-events", "none");
+            .style("position", "absolute")
+            .style("visibility", "hidden")
+            .style("background-color", "#24283b")
+            .style("border", "1px solid #2f334d")
+            .style("border-width", "1px")
+            .style("border-radius", "5px")
+            .style("padding", "10px")
+            .style("font-size", "12px")
+            .style("pointer-events", "none")
+            .style("color", "#a9b1d6");
 
         const bisectDate = d3.bisector(d => d.data[0]).left;
         const focusLine = svg.append("line")

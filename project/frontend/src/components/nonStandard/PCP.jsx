@@ -129,15 +129,16 @@ export default function PCP({
         const tooltip = d3.select("body").append("div")
             .attr("class", "tooltip")
             .style("position", "absolute")
-            .style("background", "white")
-            .style("border", "1px solid #ddd")
+            .style("background", "#24283b")
+            .style("border", "1px solid #2f334d")
             .style("border-radius", "4px")
             .style("padding", "8px")
             .style("font-size", "12px")
             .style("pointer-events", "none")
             .style("opacity", 0)
             .style("z-index", "1000")
-            .style("transition", "opacity 0.2s");
+            .style("transition", "opacity 0.2s")
+            .style("color", "#a9b1d6");
 
         dimensions.forEach(dimension => {
             svg.append("g")
@@ -147,8 +148,9 @@ export default function PCP({
                         [y[dimension.name].domain()[0], y[dimension.name].domain()[1]] : [])
                     .tickFormat(d => typeof d === 'number' ? d.toFixed(1) : ""))
                 .call(g => {
-                    g.select(".domain").attr("stroke-opacity", 0.5);
-                    g.selectAll(".tick line").attr("stroke-opacity", 0.5);
+                    g.select(".domain").attr("stroke", "#2f334d").attr("stroke-opacity", 0.5);
+                    g.selectAll(".tick line").attr("stroke", "#2f334d").attr("stroke-opacity", 0.5);
+                    g.selectAll(".tick text").style("fill", "#a9b1d6");
                 });
 
             // Add axis label at the bottom
@@ -156,7 +158,7 @@ export default function PCP({
                 .attr("x", x(dimension.name))
                 .attr("y", innerHeight + 30)
                 .attr("text-anchor", "middle")
-                .attr("fill", "#000")
+                .attr("fill", "#a9b1d6")
                 .style("font-size", "11px")
                 .text(dimension.label || dimension.name);
         });
@@ -168,6 +170,7 @@ export default function PCP({
                 .attr("text-anchor", "middle")
                 .style("font-size", "16px")
                 .style("font-weight", "bold")
+                .style("fill", "#a9b1d6")
                 .text(title);
         }
 
@@ -180,8 +183,8 @@ export default function PCP({
                 .attr("y", legendY - 12)
                 .attr("width", innerWidth)
                 .attr("height", 24)
-                .attr("fill", "white")
-                .attr("stroke", "#ccc")
+                .attr("fill", "#24283b")
+                .attr("stroke", "#2f334d")
                 .attr("stroke-width", 1)
                 .attr("rx", 4)
                 .attr("opacity", 0.95);
@@ -213,6 +216,7 @@ export default function PCP({
                     .attr("y", 4)
                     .style("font-size", "10px")
                     .style("font-weight", "500")
+                    .style("fill", "#a9b1d6")
                     .text(category);
             });
         }

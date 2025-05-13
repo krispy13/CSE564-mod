@@ -12,6 +12,8 @@ const SunburstChart = ({
     const svgRef = useRef();
     const containerRef = useRef();
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    // Add state for processed data
+    const [processedData, setProcessedData] = useState(null);
 
     // Borough color mapping for consistent visualization with softer colors on dark background
     const BOROUGH_COLORS = {
@@ -43,6 +45,85 @@ const SunburstChart = ({
         return color.toString();
     };
 
+    const precomputeAverageRatings = (node) => {
+        if (node.depth === 3) {
+            // Leaf nodes (restaurants) - use their actual rating
+            node.avgRating = node.data.rating;
+        } else if (node.children) {
+            if (node.depth === 2) {
+                // Cuisine level - average of direct restaurant children
+                node.avgRating = d3.mean(node.children, child => child.data.rating);
+            } else if (node.depth === 1) {
+                // Borough level - average of all descendant restaurants
+                node.avgRating = d3.mean(node.children.flatMap(child => 
+                    child.children ? child.children.map(c => c.data.rating) : []
+                ));
+            }
+        }
+        // Recursively compute for children
+        if (node.children) {
+            node.children.forEach(precomputeAverageRatings);
+        }
+        return node.avgRating;
+    };
+
+    const preprocessRestaurantData = (rawData) => {
+        // Create a deep copy to avoid mutating original data
+        const data = JSON.parse(JSON.stringify(rawData));
+        
+        // Process each borough
+        data.children.forEach(borough => {
+            if (!borough.children) return;
+            
+            // Process each cuisine type within the borough
+            borough.children.forEach(cuisine => {
+                if (!cuisine.children) return;
+                
+                // Sort restaurants by rating (highest first) and take top 20
+                cuisine.children = cuisine.children
+                    .sort((a, b) => {
+                        // Sort by rating first
+                        const ratingDiff = b.rating - a.rating;
+                        // If ratings are equal, sort alphabetically
+                        return ratingDiff !== 0 ? ratingDiff : a.name.localeCompare(b.name);
+                    })
+                    .slice(0, 7);
+
+                // Update cuisine metadata
+                cuisine.totalRestaurants = cuisine.children.length;
+                cuisine.avgRating = d3.mean(cuisine.children, r => r.rating);
+            });
+
+            // Remove empty cuisines
+            borough.children = borough.children.filter(cuisine => 
+                cuisine.children && cuisine.children.length > 0
+            );
+
+            // Sort cuisines by average rating
+            borough.children.sort((a, b) => b.avgRating - a.avgRating);
+        });
+
+        // Add metadata to the root
+        data.totalBoroughs = data.children.length;
+        data.totalCuisines = data.children.reduce((sum, borough) => 
+            sum + borough.children.length, 0
+        );
+        data.totalRestaurants = data.children.reduce((sum, borough) => 
+            sum + borough.children.reduce((cuisineSum, cuisine) => 
+                cuisineSum + cuisine.children.length, 0
+            ), 0
+        );
+
+        return data;
+    };
+
+    // Process data when it changes
+    useEffect(() => {
+        if (!data) return;
+        const processed = preprocessRestaurantData(data);
+        setProcessedData(processed);
+    }, [data]);
+
     // Add resize observer to update dimensions when container size changes
     useEffect(() => {
         const container = containerRef.current;
@@ -59,7 +140,7 @@ const SunburstChart = ({
     }, []);
 
     useEffect(() => {
-        if (!data || !data.children || !dimensions.width || !dimensions.height) return;
+        if (!processedData || !dimensions.width || !dimensions.height) return;
 
         d3.select(svgRef.current).selectAll('*').remove();
 
@@ -102,7 +183,9 @@ const SunburstChart = ({
             .style('color', '#ffffff') // Bright white text
             .style('pointer-events', 'none');
         
-        const root = partition(data);
+        const root = partition(processedData);
+        precomputeAverageRatings(root);
+
         let currentZoomTarget = root;
 
         root.each(d => {
@@ -171,16 +254,18 @@ const SunburstChart = ({
         }
 
         function labelTransform(currentCoords) {
-            const x = (currentCoords.x0 + currentCoords.x1) / 2 * 180 / Math.PI;
+            const x = (currentCoords.x0 + currentCoords.x1) / 2;
             const y = (currentCoords.y0 + currentCoords.y1) / 2;
-            if (isNaN(x) || isNaN(y)) return 'translate(0,0) rotate(0)'; // Fallback for NaN
-            return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
+            const angle = ((x * 180) / Math.PI) - 90;
+            const radius = y;
+            // Add 90 degrees to make text perpendicular to the radius
+            return `rotate(${angle}) translate(${radius},0) rotate(-90) rotate(${angle > 90 ? 180 : 0})`;
         }
         
         const centerText = svg.append('text')
             .attr('text-anchor', 'middle')
             .attr('dy', '0.35em')
-            .attr('fill', '#ffffff') // Bright white text
+            .attr('fill', '#a9b1d6') // Consistent soft white text
             .style('font-size', '10px') // Slightly larger
             .style('font-weight', '500') // Medium weight for better visibility
             .style('font-family', 'system-ui, -apple-system, sans-serif') // System font for center text
@@ -386,6 +471,7 @@ const SunburstChart = ({
             .join('text')
             .attr('pointer-events', 'none')
             .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'middle')
             .attr('transform', dNode => labelTransform(dNode.current))
             .attr('fill-opacity', dNode => {
                 const p = currentZoomTarget; // initially root
@@ -395,7 +481,6 @@ const SunburstChart = ({
                 }
                 return 0;
             })
-            .attr('dy', '0.35em')
             .attr('font-size', dNode => {
                 // Larger text for outer rings, smaller for inner
                 if (dNode.depth === 1) return '12px';
@@ -403,7 +488,7 @@ const SunburstChart = ({
                 return '9px';
             })
             .style('font-family', 'system-ui, -apple-system, sans-serif') // System font for labels
-            .attr('fill', '#ffffff') // Bright white text for maximum contrast
+            .attr('fill', '#a9b1d6') // Consistent soft white text for maximum contrast
             .text(dNode => dNode.data.name)
             .each(function(dNode) {
                 const self = d3.select(this);
@@ -414,10 +499,10 @@ const SunburstChart = ({
                 let text = self.text();
                 
                 // Calculate available space with more conservative margins
-                const arcWidth = (dNode.current.x1 - dNode.current.x0) * ((dNode.current.y0 + dNode.current.y1) / 2);
+                const arcLength = Math.abs(dNode.current.x1 - dNode.current.x0) * ((dNode.current.y0 + dNode.current.y1) / 2);
                 const arcHeight = dNode.current.y1 - dNode.current.y0;
-                // More conservative space calculation - using 70% of arc width
-                const availableSpace = Math.min(arcWidth * 0.7, arcHeight * 1.8);
+                // More conservative space calculation - using 80% of arc length
+                const availableSpace = Math.min(arcLength * 0.8, arcHeight * 1.8);
 
                 // If text is too long, try to fit it
                 if (textLength > availableSpace) {
@@ -459,7 +544,7 @@ const SunburstChart = ({
             .style('font-size', '16px') // Larger title
             .style('font-weight', '600') // Semi-bold
             .style('font-family', 'system-ui, -apple-system, sans-serif') // System font for title
-            .style('fill', '#ffffff') // Bright white text
+            .style('fill', '#a9b1d6') // Consistent soft white text
             .text('NYC Restaurant Ratings');
 
         // Handle initial borough selection if any
@@ -474,7 +559,7 @@ const SunburstChart = ({
             tooltipDiv.remove();
             // Any other cleanup, e.g. d3.select(svgRef.current).selectAll('*').remove(); if not handled by effect re-run
         };
-    }, [data, margin, maxDepth, transitionDuration, selectedBorough, onBoroughSelect, dimensions]); // Add dimensions to dependencies
+    }, [processedData, dimensions, margin, maxDepth, transitionDuration, selectedBorough, onBoroughSelect]);
 
     return (
         <div ref={containerRef} className="sunburst-container" style={{ position: 'relative', width: '100%', height: '100%' }}>

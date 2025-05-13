@@ -1,38 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-body {
-  @apply bg-[#1a1b26];
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-/* Visualization styles */
-.visualization-title {
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-.visualization-text {
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-/* Text styles */
-.axis-label {
-  @apply text-sm;
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-.legend-text {
-  @apply text-xs;
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-/* General text styles */
-h1, h2, h3, h4, h5, h6,
-.heading,
-.body-text,
-p,
-span,
-div {
-  font-family: system-ui, -apple-system, sans-serif;
-}

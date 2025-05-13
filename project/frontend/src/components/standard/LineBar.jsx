@@ -299,6 +299,38 @@ export default function LineBarChart({
                 g.selectAll('.hover-value-line').remove();
             });
 
+        // Update tooltip text color
+        const tooltip = d3.select('body')
+            .append('div')
+            .attr('class', 'tooltip')
+            .style('position', 'absolute')
+            .style('visibility', 'hidden')
+            .style('background-color', '#24283b')
+            .style('border', '1px solid #2f334d')
+            .style('border-radius', '4px')
+            .style('padding', '8px')
+            .style('color', '#a9b1d6')  // Updated from white
+            .style('font-size', '12px')
+            .style('pointer-events', 'none')
+            .style('z-index', 1000);
+
+        // Update any value labels or text elements
+        g.selectAll('.value-label')
+            .style('fill', '#a9b1d6')  // Updated from white
+            .style('font-size', '12px');
+
+        // Update legend text if present
+        g.selectAll('.legend-text')
+            .style('fill', '#a9b1d6');  // Updated from white
+
+        // Update any other text elements that might be white
+        g.selectAll('text')
+            .filter(function() {
+                const currentColor = d3.select(this).style('fill');
+                return currentColor === '#fff' || currentColor === '#ffffff' || currentColor === 'white';
+            })
+            .style('fill', '#a9b1d6');
+
     }, [data, margin, xAxisLabel, yBarAxisLabel, yLineAxisLabel, barColor, lineColor, hoverColor, title, transitionDuration, dimensions, selectedBorough]);
 
     return (

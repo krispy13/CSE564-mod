@@ -5,6 +5,7 @@ import SunburstChart from './components/standard/SunburstChart';
 import GeoMap from './components/standard/GeoMap';
 import PCP from './components/nonStandard/PCP';
 import LineBarChart from './components/standard/LineBar';
+import NYC_Chatbot from './components/nonStandard/NYC_Chatbot';
 import { data_overall } from './data/data_pcp.js';
 import {
     overallCitywideLineData,
@@ -150,14 +151,9 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="h-screen bg-[#1a1b26] flex flex-col">
-            {/* Minimal header */}
-            <header className="p-2 h-12">
-                <h1 className="text-xl font-semibold text-[#a9b1d6]">Data Visualization Dashboard</h1>
-            </header>
-
+        <div className="h-screen w-screen bg-theme-bg flex flex-col overflow-hidden">
             {/* Main grid with fixed height calculations */}
-            <main className="grid grid-cols-3 grid-rows-2 gap-2 p-2 h-[calc(100vh-6rem)]">
+            <main className="grid grid-cols-3 grid-rows-2 gap-4 p-4 h-[calc(100vh-1rem)]">
                 {/* Each chart container needs to be sized relative to its space */}
                 <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
                     <h3 className="text-sm font-medium text-[#ffffff] mb-1">NYC Neighborhoods</h3>
@@ -171,7 +167,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
-                    <h3 className="text-sm font-medium text-[#ffffff] mb-1">NYC Restaurant Ratings</h3>
+                    {/* <h3 className="text-sm font-medium text-[#ffffff] mb-1">NYC Restaurant Ratings</h3> */}
                     <div className="flex-1 w-full h-[calc(100%-2rem)]">
                         {loadingRestaurants ? (
                             <div className="flex items-center justify-center h-full">
@@ -215,12 +211,12 @@ export default function Dashboard() {
                 </div>
 
                 <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
-                    <h3 className="text-sm font-medium text-[#ffffff] mb-1">
+                    {/* <h3 className="text-sm font-medium text-[#ffffff] mb-1">
                         NYC Crime Trends by Borough
                         {selectedBorough && (
                             <span className="ml-2 text-[#7aa2f7]">(Filtered: {selectedBorough})</span>
                         )}
-                    </h3>
+                    </h3> */}
                     <div className="flex-1 w-full h-[calc(100%-2rem)]">
                         {loading ? (
                             <div className="flex items-center justify-center h-full">
@@ -246,12 +242,12 @@ export default function Dashboard() {
                 </div>
 
                 <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
-                    <h3 className="text-sm font-medium text-[#ffffff] mb-1">
+                    {/* <h3 className="text-sm font-medium text-[#ffffff] mb-1">
                         Environmental Metrics
                         {selectedBorough && (
                             <span className="ml-2 text-[#7aa2f7]">(Filtered: {selectedBorough})</span>
                         )}
-                    </h3>
+                    </h3> */}
                     <div className="flex-1 w-full h-[calc(100%-2rem)]">
                         <LineBarChart
                             data={getLineDataForBorough(selectedBorough).map(d => ({
@@ -268,47 +264,11 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
-                    <h3 className="text-lg font-medium text-[#ffffff] mb-2">Welcome to NYC Explorer!</h3>
-                    <div className="flex-1">
-                        <p className="mb-3 text-[#787c99]">
-                            Discover NYC neighborhoods through our interactive visualizations:
-                        </p>
-                        <ul className="space-y-1.5 text-[#787c99]">
-                            <li className="flex items-start">
-                                <span className="text-[#7aa2f7] mr-2">•</span>
-                                <span><span className="font-medium text-[#ffffff]">Interactive Map:</span> Click boroughs to explore local data</span>
-                            </li>
-                            <li className="flex items-start">
-                                <span className="text-[#7aa2f7] mr-2">•</span>
-                                <span><span className="font-medium text-[#ffffff]">Dining:</span> Find top-rated restaurants by cuisine</span>
-                            </li>
-                            <li className="flex items-start">
-                                <span className="text-[#7aa2f7] mr-2">•</span>
-                                <span><span className="font-medium text-[#ffffff]">Stays:</span> Compare Airbnb prices and reviews</span>
-                            </li>
-                            <li className="flex items-start">
-                                <span className="text-[#7aa2f7] mr-2">•</span>
-                                <span><span className="font-medium text-[#ffffff]">Safety:</span> View crime patterns by time and area</span>
-                            </li>
-                            <li className="flex items-start">
-                                <span className="text-[#7aa2f7] mr-2">•</span>
-                                <span><span className="font-medium text-[#ffffff]">Environment:</span> Check area comfort metrics</span>
-                            </li>
-                        </ul>
-                        <p className="mt-3 text-sm text-[#7aa2f7] font-medium">
-                            💡 Tip: Click any borough to focus all charts on that area!
-                        </p>
-                    </div>
-                </div>
+                <NYC_Chatbot />
+
+                
             </main>
 
-            {/* Minimal footer */}
-            <footer className="p-2 h-12">
-                <p className="text-center text-[#565f89] text-xs">
-                    &copy; {new Date().getFullYear()} NYC Explorer. All rights reserved.
-                </p>
-            </footer>
         </div>
     );
 }
