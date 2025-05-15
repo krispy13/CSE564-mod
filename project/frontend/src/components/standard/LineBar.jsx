@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
-// Borough color mapping for consistent visualization with softer colors on dark background
+// Borough color mapping with lighter colors for dark background
 const boroughColors = {
-    'MANHATTAN': '#81A1C1', // Soft blue
-    'BROOKLYN': '#A3BE8C', // Soft green
-    'QUEENS': '#EBCB8B',   // Soft yellow
-    'BRONX': '#B48EAD',    // Soft purple
-    'STATEN ISLAND': '#88C0D0' // Soft cyan
+    'MANHATTAN': '#9EB7FF',  // Lighter blue
+    'BROOKLYN': '#FFB094',   // Lighter orange/coral
+    'QUEENS': '#D4BBFF',     // Lighter purple
+    'BRONX': '#FF9DB5',      // Lighter pink
+    'STATEN ISLAND': '#98FFE3' // Lighter cyan
 };
 
 export default function LineBarChart({
@@ -20,7 +20,7 @@ export default function LineBarChart({
     yLineAxisLabel = 'Value',
     barColor = '#3B4252',    // Darker gray for bars
     lineColor = '#7aa2f7',   // Bright blue for line
-    hoverColor = '#81A1C1',  // Soft blue for hover
+    hoverColor = '#4A5073',  
     title = 'Environmental Metrics by Borough',
     transitionDuration = 800,
     selectedBorough = null,
@@ -298,38 +298,6 @@ export default function LineBarChart({
                     .attr('stroke-width', 2);
                 g.selectAll('.hover-value-line').remove();
             });
-
-        // Update tooltip text color
-        const tooltip = d3.select('body')
-            .append('div')
-            .attr('class', 'tooltip')
-            .style('position', 'absolute')
-            .style('visibility', 'hidden')
-            .style('background-color', '#24283b')
-            .style('border', '1px solid #2f334d')
-            .style('border-radius', '4px')
-            .style('padding', '8px')
-            .style('color', '#a9b1d6')  // Updated from white
-            .style('font-size', '12px')
-            .style('pointer-events', 'none')
-            .style('z-index', 1000);
-
-        // Update any value labels or text elements
-        g.selectAll('.value-label')
-            .style('fill', '#a9b1d6')  // Updated from white
-            .style('font-size', '12px');
-
-        // Update legend text if present
-        g.selectAll('.legend-text')
-            .style('fill', '#a9b1d6');  // Updated from white
-
-        // Update any other text elements that might be white
-        g.selectAll('text')
-            .filter(function() {
-                const currentColor = d3.select(this).style('fill');
-                return currentColor === '#fff' || currentColor === '#ffffff' || currentColor === 'white';
-            })
-            .style('fill', '#a9b1d6');
 
     }, [data, margin, xAxisLabel, yBarAxisLabel, yLineAxisLabel, barColor, lineColor, hoverColor, title, transitionDuration, dimensions, selectedBorough]);
 

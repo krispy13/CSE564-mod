@@ -6,14 +6,14 @@ export default function PCP({
     dimensions = [],
     width,
     height,
-    margin = { top: 40, right: 50, bottom: 50, left: 50 },
+    margin = { top: 50, right: 50, bottom: 80, left: 50 },
     lineColor = "#4F46E5",
     lineHoverColor = "#818CF8",
     lineOpacity = 0.2, // Changed from 0.5
     lineHoverOpacity = 0.9,
     lineWidth = 1.5,
     transitionDuration = 800,
-    title = "",
+    title = "Airbnb Listing Characteristics",
     showLabels = true,
     labelKey = "label",
     colorByCategory = true,
@@ -165,18 +165,19 @@ export default function PCP({
 
         if (title && title !== "Product Metrics") {
             svg.append("text")
-                .attr("x", innerWidth / 2)
-                .attr("y", -margin.top / 2 + 10)
-                .attr("text-anchor", "middle")
-                .style("font-size", "16px")
-                .style("font-weight", "bold")
-                .style("fill", "#a9b1d6")
+                .attr("x", innerWidth / 2 - innerWidth * 0.3)
+                .attr("y", -30)
+                .attr('class', 'visualization-title')
+                .style('font-size', '16px') // Larger title
+                .style('font-weight', '600') // Semi-bold
+                .style('font-family', 'system-ui, -apple-system, sans-serif') // System font for title
+                .style('fill', '#a9b1d6') // Consistent soft white text
                 .text(title);
         }
 
         if (colorByCategory) {
             const legendItemWidth = Math.floor(innerWidth / categories.length);
-            const legendY = -margin.top + 15;
+            const legendY = innerHeight + 50;
 
             svg.append("rect")
                 .attr("x", 0)

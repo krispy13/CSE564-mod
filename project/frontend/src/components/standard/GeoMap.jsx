@@ -134,6 +134,18 @@ export default function GeoMap({ onBoroughSelect, selectedBorough }) {
       .attr("viewBox", `0 0 ${finalWidth} ${finalHeight}`)
       .style("background-color", "#24283b"); // Dark blue-gray background
 
+    // Add title
+    svg.append('text')
+      .attr('x', finalWidth/2 - finalWidth * 0.3)
+      .attr('y', finalHeight * 0.025 - finalHeight * 0.10)
+      .attr('text-anchor', 'middle')
+      .attr('class', 'visualization-title')
+      .style('font-size', '16px')
+      .style('font-weight', '600')
+      .style('font-family', 'system-ui, -apple-system, sans-serif')
+      .style('fill', '#a9b1d6')
+      .text(selectedBorough ? `${selectedBorough} Neighborhood Map` : 'NYC Neighborhood Map');
+
     // Create container for map features
     const mapGroup = svg.append("g")
       .attr("transform", `translate(0, -${finalHeight * 0.1})`)

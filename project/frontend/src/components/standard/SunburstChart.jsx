@@ -483,13 +483,26 @@ const SunburstChart = ({
             })
             .attr('font-size', dNode => {
                 // Larger text for outer rings, smaller for inner
-                if (dNode.depth === 1) return '12px';
-                if (dNode.depth === 2) return '10px';
-                return '9px';
+                if (dNode.depth === 1) return '14px'; // Borough names (increased from 12px)
+                if (dNode.depth === 2) return '12px'; // Cuisine types (increased from 10px)
+                return '10px'; // Restaurant names (increased from 9px)
             })
-            .style('font-family', 'system-ui, -apple-system, sans-serif') // System font for labels
+            .style('font-family', 'system-ui, -apple-system, sans-serif')
+            .style('font-weight', dNode => {
+                // Make borough names bold, others regular
+                return dNode.depth === 1 ? '600' : '400';
+            })
             .attr('fill', '#a9b1d6') // Consistent soft white text for maximum contrast
-            .text(dNode => dNode.data.name)
+            .text(dNode => {
+                // Add rating information to the text
+                if (dNode.depth === 3) {
+                    return `${dNode.data.name} (${dNode.data.rating.toFixed(1)})`;
+                } else if (dNode.depth === 2) {
+                    const avgRating = dNode.children ? d3.mean(dNode.children, child => child.data.rating) : null;
+                    return `${dNode.data.name} ${avgRating ? `(${avgRating.toFixed(1)})` : ''}`;
+                }
+                return dNode.data.name;
+            })
             .each(function(dNode) {
                 const self = d3.select(this);
                 if (!labelVisible(dNode.current) || !(+self.attr('fill-opacity'))) {
@@ -538,7 +551,7 @@ const SunburstChart = ({
         
         svg.append('text')
             .attr('x', 0)
-            .attr('y', -dimensions.height / 2 + margin.top + 5)
+            .attr('y', -dimensions.height / 2 + margin.top - 7)
             .attr('text-anchor', 'middle')
             .attr('class', 'visualization-title')
             .style('font-size', '16px') // Larger title

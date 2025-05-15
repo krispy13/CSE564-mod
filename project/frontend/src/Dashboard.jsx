@@ -42,8 +42,8 @@ export default function Dashboard() {
     // Define PCP dimensions
     const pcpDimensions = [
         { name: "price", label: "Price" },
-        { name: "number of reviews", label: "Number of Reviews" },
-        { name: "review rate number", label: "Review Rate" },
+        { name: "number of reviews", label: "# of Reviews" },
+        { name: "review rate number", label: "Review Rating" },
         { name: "availability 365", label: "Availability (Days)" },
     ];
 
@@ -150,14 +150,16 @@ export default function Dashboard() {
         }
     };
 
+    const stretchFactor = 1.5; // Increase this value to stretch more vertically
+
     return (
         <div className="h-screen w-screen bg-theme-bg flex flex-col overflow-hidden">
             {/* Main grid with fixed height calculations */}
-            <main className="grid grid-cols-3 grid-rows-2 gap-4 p-4 h-[calc(100vh-1rem)]">
-                {/* Each chart container needs to be sized relative to its space */}
-                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
-                    <h3 className="text-sm font-medium text-[#ffffff] mb-1">NYC Neighborhoods</h3>
-                    <div className="flex-1 w-full h-[calc(100%-2rem)]">
+            <main className="grid grid-cols-3 grid-rows-2 gap-4 p-4 h-[calc(100vh-2rem)]">
+                {/* Map container */}
+                <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col overflow-hidden">
+                    {/* <h3 className="text-sm font-medium text-[#ffffff] mb-1">NYC Neighborhoods</h3> */}
+                    <div className="flex-1 w-full" style={{ height: 'calc(100% - 1.75rem)' }}>
                         <GeoMap 
                             onBoroughSelect={setSelectedBorough} 
                             selectedBorough={selectedBorough}
@@ -188,19 +190,19 @@ export default function Dashboard() {
                 </div>
 
                 <div className="bg-[#24283b] rounded-md shadow-lg border border-[#2f334d] p-3 flex flex-col h-full">
-                    <h3 className="text-sm font-medium text-[#ffffff] mb-1">
+                    {/* <h3 className="text-sm font-medium text-[#ffffff] mb-1">
                         Airbnb Listing Characteristics
                         {selectedBorough && (
                             <span className="ml-2 text-[#7aa2f7]">(Filtered: {selectedBorough})</span>
                         )}
-                    </h3>
+                    </h3> */}
                     <div className="flex-1 w-full h-[calc(100%-2rem)]">
                         <PCP
                             data={getFilteredPCPData()}
                             dimensions={pcpDimensions}
                             colorByCategory={true}
                             categoryAttribute="neighbourhood group"
-                            title=""
+                            title="Airbnb Listing Characteristics"
                             showLabels={false}
                             lineOpacity={0.3}
                             showCentroids={true}
